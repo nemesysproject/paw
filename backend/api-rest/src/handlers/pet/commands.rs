@@ -32,24 +32,30 @@ pub async fn create_pet(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let mut command: Option<CreatePetCommand> = None;
+    let mut command_map = serde_json::Map::new();
     let mut files: Vec<(Vec<u8>, String)> = Vec::new();
 
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or_default().to_string();
-        if name == "data" {
-            let text = field.text().await.unwrap_or_default();
-            command = serde_json::from_str(&text).ok();
-        } else if name == "file" {
+        if name == "file" {
             let file_name = field.file_name().unwrap_or("image.jpg").to_string();
             let data = field.bytes().await.unwrap_or_default().to_vec();
             files.push((data, file_name));
+        } else {
+            let text = field.text().await.unwrap_or_default();
+            if !text.is_empty() && text != "null" {
+                // Intentar parsear como valor JSON (número, bool, etc.) o tratarlo como string
+                let val = serde_json::from_str::<serde_json::Value>(&text)
+                    .unwrap_or_else(|_| serde_json::Value::String(text));
+                
+                command_map.insert(name, val);
+            }
         }
     }
 
-    let command = match command {
-        Some(c) => c,
-        None => return (StatusCode::BAD_REQUEST, Json(json!({"error": "Faltan datos (campo 'data')"}))).into_response(),
+    let command: CreatePetCommand = match serde_json::from_value(serde_json::Value::Object(command_map)) {
+        Ok(c) => c,
+        Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response(),
     };
 
     if files.is_empty() {
@@ -142,24 +148,30 @@ pub async fn update_pet(
     Path(id): Path<String>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let mut command: Option<UpdatePetCommand> = None;
+    let mut command_map = serde_json::Map::new();
     let mut files: Vec<(Vec<u8>, String)> = Vec::new();
 
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or_default().to_string();
-        if name == "data" {
-            let text = field.text().await.unwrap_or_default();
-            command = serde_json::from_str(&text).ok();
-        } else if name == "file" {
+        if name == "file" {
             let file_name = field.file_name().unwrap_or("update.jpg").to_string();
             let data = field.bytes().await.unwrap_or_default().to_vec();
             files.push((data, file_name));
+        } else {
+            let text = field.text().await.unwrap_or_default();
+            if !text.is_empty() && text != "null" {
+                // Intentar parsear como valor JSON (número, bool, etc.) o tratarlo como string
+                let val = serde_json::from_str::<serde_json::Value>(&text)
+                    .unwrap_or_else(|_| serde_json::Value::String(text));
+                
+                command_map.insert(name, val);
+            }
         }
     }
 
-    let command = match command {
-        Some(c) => c,
-        None => return (StatusCode::BAD_REQUEST, "Faltan datos").into_response(),
+    let command: UpdatePetCommand = match serde_json::from_value(serde_json::Value::Object(command_map)) {
+        Ok(c) => c,
+        Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response(),
     };
 
     let geohash = if let (Some(lat), Some(lon)) = (command.last_latitude, command.last_longitude) {
