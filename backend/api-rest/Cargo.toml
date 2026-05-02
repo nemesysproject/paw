@@ -1,0 +1,46 @@
+[package]
+name = "api-rest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.4", features = ["timeout", "limit"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono"] }
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Resilience
+failsafe = "1.1.0"
+
+# Utils
+uuid = { version = "1.6", features = ["v4", "v5", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+dotenvy = "0.15"
+reqwest = { version = "0.13.3", default-features = false, features = ["json", "multipart", "form", "rustls"] }
+sha1 = "0.11.0"
+hex = "0.4.3"
+infer = "0.19.0"
+utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "8", features = ["axum", "reqwest"] }
+geohash = "0.13.1"
+lapin = "4.7.0"
+amqprs = "2.1.5"
+mongodb = "3.6.0"
+tokio-executor-trait = "3.1.0"
+futures-lite = "2.6.1"
+
+[dev-dependencies]
+axum-test = "16.4.1"
+mockall = "0.14.0"

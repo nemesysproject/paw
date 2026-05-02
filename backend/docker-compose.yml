@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Base de Datos (Opcional, para desarrollo local en reemplazo o uso conjunto de Prisma)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: paw_admin
+      POSTGRES_PASSWORD: paw_password
+      POSTGRES_DB: paw_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Message Broker para Sincronización CQRS
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # Base de Datos NoSQL (Read Model)
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  # Backend en Rust
+  api_rest:
+    build: 
+      context: ./api-rest
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgres://paw_admin:paw_password@postgres:5432/paw_db
+      - RABBITMQ_URI=amqp://rabbitmq:5672/%2f
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=paw_db
+      - RUST_LOG=info,api_rest=debug
+    depends_on:
+      - postgres
+      - rabbitmq
+      - mongodb
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./api-rest/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - api_rest
+
+volumes:
+  pgdata:
+  mongodata:
