@@ -1,7 +1,7 @@
 use axum::{
     extract::{State, Path},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     Json,
 };
 use crate::AppState;
@@ -25,14 +25,17 @@ use uuid::Uuid;
 pub async fn create_species(
     State(state): State<AppState>,
     Json(command): Json<CreateSpeciesCommand>,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let species = Species {
         id: Uuid::new_v4().to_string(),
         name: command.name,
     };
 
-    CatalogRepository::create_species(&state.pool, &species).await.unwrap();
-    (StatusCode::CREATED, Json(species))
+    CatalogRepository::create_species(&state.pool, &species).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok((StatusCode::CREATED, Json(species)).into_response())
 }
 
 #[utoipa::path(
@@ -50,14 +53,17 @@ pub async fn update_species(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(command): Json<UpdateSpeciesCommand>,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let species = Species {
         id: id.clone(),
         name: command.name,
     };
 
-    let rows = CatalogRepository::update_species(&state.pool, &id, &species).await.unwrap();
-    if rows == 0 { StatusCode::NOT_FOUND } else { StatusCode::OK }
+    let rows = CatalogRepository::update_species(&state.pool, &id, &species).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    if rows == 0 { Ok(StatusCode::NOT_FOUND.into_response()) } else { Ok(StatusCode::OK.into_response()) }
 }
 
 #[utoipa::path(
@@ -73,9 +79,12 @@ pub async fn update_species(
 pub async fn delete_species(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    let rows = CatalogRepository::delete_species(&state.pool, &id).await.unwrap();
-    if rows == 0 { StatusCode::NOT_FOUND } else { StatusCode::OK }
+) -> Result<Response, Response> {
+    let rows = CatalogRepository::delete_species(&state.pool, &id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    if rows == 0 { Ok(StatusCode::NOT_FOUND.into_response()) } else { Ok(StatusCode::OK.into_response()) }
 }
 
 // --- Breeds ---
@@ -93,15 +102,18 @@ pub async fn delete_species(
 pub async fn create_breed(
     State(state): State<AppState>,
     Json(command): Json<CreateBreedCommand>,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let breed = Breed {
         id: Uuid::new_v4().to_string(),
         name: command.name,
         species_id: command.species_id,
     };
 
-    CatalogRepository::create_breed(&state.pool, &breed).await.unwrap();
-    (StatusCode::CREATED, Json(breed))
+    CatalogRepository::create_breed(&state.pool, &breed).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok((StatusCode::CREATED, Json(breed)).into_response())
 }
 
 #[utoipa::path(
@@ -119,15 +131,18 @@ pub async fn update_breed(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(command): Json<UpdateBreedCommand>,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let breed = Breed {
         id: id.clone(),
         name: command.name,
         species_id: command.species_id,
     };
 
-    let rows = CatalogRepository::update_breed(&state.pool, &id, &breed).await.unwrap();
-    if rows == 0 { StatusCode::NOT_FOUND } else { StatusCode::OK }
+    let rows = CatalogRepository::update_breed(&state.pool, &id, &breed).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    if rows == 0 { Ok(StatusCode::NOT_FOUND.into_response()) } else { Ok(StatusCode::OK.into_response()) }
 }
 
 #[utoipa::path(
@@ -143,7 +158,10 @@ pub async fn update_breed(
 pub async fn delete_breed(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    let rows = CatalogRepository::delete_breed(&state.pool, &id).await.unwrap();
-    if rows == 0 { StatusCode::NOT_FOUND } else { StatusCode::OK }
+) -> Result<Response, Response> {
+    let rows = CatalogRepository::delete_breed(&state.pool, &id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    if rows == 0 { Ok(StatusCode::NOT_FOUND.into_response()) } else { Ok(StatusCode::OK.into_response()) }
 }

@@ -1,15 +1,23 @@
 use sqlx::PgPool;
-use tracing::{info, warn};
+use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::models::entities::{Breed, Species};
+use crate::models::entities::{Breed, Species, PetGender, PetStatus, MediaTypeEntity};
 use crate::repositories::catalog_repo::CatalogRepository;
+
+static MEDIA_TYPES: &[(&str, &str)] = &[
+    ("ReferencePhoto", "Foto de Referencia"),
+    ("SightingImage", "Imagen de Avistamiento"),
+    ("SightingVideo", "Video de Avistamiento"),
+];
+
 
 /// Datos estáticos del catálogo: (nombre_especie, [razas])
 static CATALOG: &[(&str, &[&str])] = &[
     (
         "Perro",
         &[
+            "Mestizo",
             "Labrador Retriever",
             "Golden Retriever",
             "Pastor Alemán",
@@ -35,6 +43,7 @@ static CATALOG: &[(&str, &[&str])] = &[
     (
         "Gato",
         &[
+            "Mestizo",
             "Siamés",
             "Persa",
             "Maine Coon",
@@ -59,6 +68,18 @@ static CATALOG: &[(&str, &[&str])] = &[
     ),
 ];
 
+static GENDERS: &[(&str, &str)] = &[
+    ("MALE", "Macho"),
+    ("FEMALE", "Hembra"),
+    ("UNKNOWN", "Desconocido"),
+];
+
+static STATUSES: &[(&str, &str)] = &[
+    ("LOST", "Perdido"),
+    ("FOUND", "Encontrado"),
+    ("ADOPTED", "Adoptado"),
+];
+
 /// Ejecuta el seeder de catálogos al inicio del servicio.
 ///
 /// Es **idempotente**: usa `ON CONFLICT (id) DO NOTHING`, por lo que
@@ -68,11 +89,31 @@ pub async fn run_catalog_seed(pool: &PgPool) -> Result<(), sqlx::Error> {
 
     let mut species_inserted = 0u32;
     let mut breeds_inserted = 0u32;
+    let mut genders_inserted = 0u32;
+    let mut statuses_inserted = 0u32;
 
+    // 1. Genders
+    for (id, name) in GENDERS {
+        let gender = PetGender { id: id.to_string(), name: name.to_string() };
+        if CatalogRepository::upsert_gender(pool, &gender).await? {
+            info!("  ✅ Género insertado: {}", name);
+            genders_inserted += 1;
+        }
+    }
+
+    // 2. Statuses
+    for (id, name) in STATUSES {
+        let status = PetStatus { id: id.to_string(), name: name.to_string() };
+        if CatalogRepository::upsert_status(pool, &status).await? {
+            info!("  ✅ Estado insertado: {}", name);
+            statuses_inserted += 1;
+        }
+    }
+
+    // 3. Species & Breeds
     for (species_name, breed_names) in CATALOG {
         // Generamos un UUID determinístico basado en el nombre para que sea
         // siempre el mismo ID aunque el seeder se ejecute varias veces.
-        // Usamos UUIDv5 con namespace DNS para reproducibilidad.
         let species_id = deterministic_uuid(species_name);
 
         let species = Species {
@@ -82,14 +123,15 @@ pub async fn run_catalog_seed(pool: &PgPool) -> Result<(), sqlx::Error> {
 
         match CatalogRepository::upsert_species(pool, &species).await {
             Ok(true) => {
-                info!("  ✅ Especie insertada: {}", species_name);
+                info!("  ✅ Especie insertada: {} (ID: {})", species_name, species_id);
                 species_inserted += 1;
             }
             Ok(false) => {
                 info!("  ⏭️  Especie ya existente: {}", species_name);
             }
             Err(e) => {
-                warn!("  ⚠️  Error insertando especie '{}': {}", species_name, e);
+                error!("  ❌ Error CRÍTICO insertando especie '{}': {:?}", species_name, e);
+                return Err(e);
             }
         }
 
@@ -108,15 +150,33 @@ pub async fn run_catalog_seed(pool: &PgPool) -> Result<(), sqlx::Error> {
                 }
                 Ok(false) => {} // Ya existía, silencio
                 Err(e) => {
-                    warn!("  ⚠️  Error insertando raza '{}': {}", breed_name, e);
+                    error!("  ❌ Error CRÍTICO insertando raza '{}': {:?}", breed_name, e);
+                    return Err(e);
                 }
             }
         }
     }
 
+    let mut media_types_inserted = 0u32;
+    // ... (tus otras variables de conteo)
+
+    // 1. Media Types
+    for (id, name) in MEDIA_TYPES {
+        // Asumiendo que tienes una entidad MediaType definida similar a PetGender
+        let m_type = MediaTypeEntity { 
+            id: id.to_string(), 
+            name: name.to_string() 
+        };
+        
+        if CatalogRepository::upsert_media_type(pool, &m_type).await? {
+            info!("  ✅ Tipo de medio insertado: {}", name);
+            media_types_inserted += 1;
+        }
+    }
+
     info!(
-        "🌱 Seeder completado — Especies nuevas: {}, Razas nuevas: {}",
-        species_inserted, breeds_inserted
+        "🌱 Seeder completado — Especies: {}, Razas: {}, Géneros: {}, Estados: {}",
+        species_inserted, breeds_inserted, genders_inserted, statuses_inserted
     );
     Ok(())
 }

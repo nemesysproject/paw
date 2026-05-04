@@ -1,9 +1,14 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   # Base de Datos (Opcional, para desarrollo local en reemplazo o uso conjunto de Prisma)
   postgres:
     image: postgres:15-alpine
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U paw_admin -d paw_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_USER: paw_admin
       POSTGRES_PASSWORD: paw_password
@@ -16,6 +21,11 @@ services:
   # Message Broker para Sincronización CQRS
   rabbitmq:
     image: rabbitmq:3-management
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -30,19 +40,26 @@ services:
 
   # Backend en Rust
   api_rest:
-    build: 
+    build:
       context: ./api-rest
       dockerfile: Dockerfile
+
     environment:
-      - DATABASE_URL=postgres://paw_admin:paw_password@postgres:5432/paw_db
-      - RABBITMQ_URI=amqp://rabbitmq:5672/%2f
-      - MONGODB_URI=mongodb://mongodb:27017
-      - MONGODB_DB_NAME=paw_db
+      - DATABASE_URL=${DATABASE_URL}
+      - RABBITMQ_URI=${RABBITMQ_URI}
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - RUST_LOG=info,api_rest=debug
     depends_on:
-      - postgres
-      - rabbitmq
-      - mongodb
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   # Nginx Reverse Proxy
   nginx:

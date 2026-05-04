@@ -1,3 +1,4 @@
+
 # Stage 1: Build — compilación estática con musl (sin dependencia de GLIBC)
 FROM rust:slim as builder
 WORKDIR /app
@@ -16,10 +17,14 @@ RUN rustup target add x86_64-unknown-linux-musl
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY .sqlx ./.sqlx
+COPY migrations ./migrations
 
 # Activar compilación offline para sqlx
 ENV SQLX_OFFLINE=true
+ENV SQLX_OFF_DATABASE_DATA=.sqlx
 
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 
 # Compilar binario estático en modo release
 RUN cargo build --release --target x86_64-unknown-linux-musl

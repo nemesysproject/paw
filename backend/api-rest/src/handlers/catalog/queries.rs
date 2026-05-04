@@ -1,7 +1,7 @@
 use axum::{
     extract::{State, Path, Query},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     Json,
 };
 use crate::AppState;
@@ -19,9 +19,12 @@ use crate::models::catalog::queries::BreedQuery;
 )]
 pub async fn get_all_species(
     State(state): State<AppState>,
-) -> impl IntoResponse {
-    let species = CatalogRepository::get_all_species(&state.pool).await.unwrap();
-    Json(species)
+) -> Result<Response, Response> {
+    let species = CatalogRepository::get_all_species(&state.pool).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok(Json(species).into_response())
 }
 
 #[utoipa::path(
@@ -36,9 +39,12 @@ pub async fn get_all_species(
 pub async fn get_all_breeds(
     State(state): State<AppState>,
     Query(query): Query<BreedQuery>,
-) -> impl IntoResponse {
-    let breeds = CatalogRepository::get_all_breeds(&state.pool, query.species_id).await.unwrap();
-    Json(breeds)
+) -> Result<Response, Response> {
+    let breeds = CatalogRepository::get_all_breeds(&state.pool, query.species_id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok(Json(breeds).into_response())
 }
 
 #[utoipa::path(
@@ -94,7 +100,10 @@ pub async fn get_breed_by_id(
 pub async fn get_breeds_by_species(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    let breeds = CatalogRepository::get_breeds_by_species(&state.pool, &id).await.unwrap();
-    Json(breeds)
+) -> Result<Response, Response> {
+    let breeds = CatalogRepository::get_breeds_by_species(&state.pool, &id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok(Json(breeds).into_response())
 }

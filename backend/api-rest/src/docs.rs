@@ -1,5 +1,4 @@
 use utoipa::OpenApi;
-use crate::models::enums::*;
 use crate::models::entities::*;
 use crate::models::pet::commands::*;
 use crate::models::catalog::commands::*;

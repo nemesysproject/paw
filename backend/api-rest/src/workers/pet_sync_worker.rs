@@ -17,19 +17,19 @@ impl PetSyncWorker {
         Self { rabbit, mongo }
     }
 
-    pub async fn run(&self) {
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Iniciando PetSyncWorker...");
         
-        let mut consumer = self.rabbit.get_consumer("pet_sync_queue", "pet.*").await.expect("Error al crear consumidor");
+        let mut consumer = self.rabbit.get_consumer("pet_sync_queue", "pet.*").await?;
 
         while let Some(delivery) = consumer.next().await {
             match delivery {
                 Ok(delivery) => {
-                    let event: PetEvent = serde_json::from_slice(&delivery.data).expect("Error al deserializar evento");
+                    let event: PetEvent = serde_json::from_slice(&delivery.data)?;
                     
                     match self.handle_event(event).await {
                         Ok(_) => {
-                            delivery.ack(BasicAckOptions::default()).await.expect("Error al enviar ACK");
+                            delivery.ack(BasicAckOptions::default()).await?;
                         }
                         Err(e) => {
                             error!("Error procesando evento: {}", e);
@@ -39,6 +39,7 @@ impl PetSyncWorker {
                 Err(e) => error!("Error en el consumidor de RabbitMQ: {}", e),
             }
         }
+        Ok(())
     }
 
     async fn handle_event(&self, event: PetEvent) -> Result<(), String> {

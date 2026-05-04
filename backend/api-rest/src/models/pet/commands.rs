@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
-use crate::models::enums::{PetGender, PetStatus};
+// use crate::models::enums::{PetGender, PetStatus};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreatePetCommand {
     pub name: Option<String>,
-    pub gender: PetGender,
-    pub status: PetStatus,
+    pub gender: String,
+    pub status: String,
     pub description: Option<String>,
     pub species_id: String,
     pub breed_id: Option<String>,
@@ -19,8 +19,8 @@ pub struct CreatePetCommand {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdatePetCommand {
     pub name: Option<String>,
-    pub gender: Option<PetGender>,
-    pub status: Option<PetStatus>,
+    pub gender: Option<String>,
+    pub status: Option<String>,
     pub description: Option<String>,
     pub species_id: Option<String>,
     pub breed_id: Option<String>,

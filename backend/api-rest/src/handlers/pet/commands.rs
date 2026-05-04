@@ -1,7 +1,7 @@
 use axum::{
     extract::{Multipart, State, Path},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     Json,
 };
 use serde_json::json;
@@ -15,6 +15,7 @@ use crate::repositories::media_repo::MediaRepository;
 use uuid::Uuid;
 use geohash::{encode, Coord};
 use chrono::Utc;
+
 
 /// Registra una nueva mascota con fotos/videos.
 #[utoipa::path(
@@ -31,7 +32,7 @@ use chrono::Utc;
 pub async fn create_pet(
     State(state): State<AppState>,
     mut multipart: Multipart,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let mut command_map = serde_json::Map::new();
     let mut files: Vec<(Vec<u8>, String)> = Vec::new();
 
@@ -55,16 +56,16 @@ pub async fn create_pet(
 
     let command: CreatePetCommand = match serde_json::from_value(serde_json::Value::Object(command_map)) {
         Ok(c) => c,
-        Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response(),
+        Err(e) => return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response()),
     };
 
     if files.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Se requiere al menos una imagen"}))).into_response();
+        return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Se requiere al menos una imagen"}))).into_response());
     }
 
     for (data, _) in &files {
         if infer::get(data).map_or(true, |k| k.matcher_type() != infer::MatcherType::Image && k.matcher_type() != infer::MatcherType::Video) {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "Archivo inválido"}))).into_response();
+            return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Archivo inválido"}))).into_response());
         }
     }
 
@@ -78,11 +79,14 @@ pub async fn create_pet(
     for (data, file_name) in files {
         match state.cloudinary_service.upload_media(data, &file_name, "pets").await {
             Ok(resp) => media_results.push(resp),
-            Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+            Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()),
         }
     }
 
-    let mut tx = state.pool.begin().await.unwrap();
+    let mut tx = state.pool.begin().await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
     let pet_id = Uuid::new_v4().to_string();
     let now = Utc::now().naive_utc();
 
@@ -103,32 +107,46 @@ pub async fn create_pet(
         last_geohash: geohash,
     };
 
-    PetRepository::create(&mut *tx, &pet).await.unwrap();
+    PetRepository::create(&mut *tx, &pet).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
 
     let mut media_list = Vec::new();
     for res in media_results {
-        let media_type = if res.secure_url.contains(".mp4") { MediaType::SightingVideo } else { MediaType::SightingImage };
+        //let media_type = if res.secure_url.contains(".mp4") { MediaType::SightingVideo } else { MediaType::SightingImage };
+        let media_type = if res.secure_url.contains(".mp4") { 
+            "SightingVideo" 
+        } else { 
+            "SightingImage" 
+        };
         let media = Media {
             id: Uuid::new_v4().to_string(),
             url: res.secure_url,
             public_id: res.public_id,
-            r#type: media_type,
+            r#type: media_type.to_string(), 
             pet_id: pet_id.clone(),
             latitude: None,
             longitude: None,
             geohash: None,
             created_at: now,
         };
-        MediaRepository::create(&mut *tx, &media).await.unwrap();
+        MediaRepository::create(&mut *tx, &media).await.map_err(|e| {
+            eprintln!("Error en BD: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        })?;
         media_list.push(media);
     }
 
-    tx.commit().await.unwrap();
+    tx.commit().await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
 
     // Notificar a RabbitMQ
     let _ = state.rabbit_service.publish_event("pet.created", &PetEvent::Created { pet, media: media_list }).await;
 
-    (StatusCode::CREATED, Json(json!({"id": pet_id}))).into_response()
+    Ok((StatusCode::CREATED, Json(json!({"id": pet_id}))).into_response())
 }
 
 /// Actualiza los datos de una mascota y permite añadir nuevas fotos.
@@ -147,7 +165,7 @@ pub async fn update_pet(
     State(state): State<AppState>,
     Path(id): Path<String>,
     mut multipart: Multipart,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let mut command_map = serde_json::Map::new();
     let mut files: Vec<(Vec<u8>, String)> = Vec::new();
 
@@ -171,7 +189,7 @@ pub async fn update_pet(
 
     let command: UpdatePetCommand = match serde_json::from_value(serde_json::Value::Object(command_map)) {
         Ok(c) => c,
-        Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response(),
+        Err(e) => return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response()),
     };
 
     let geohash = if let (Some(lat), Some(lon)) = (command.last_latitude, command.last_longitude) {
@@ -187,7 +205,10 @@ pub async fn update_pet(
         }
     }
 
-    let mut tx = state.pool.begin().await.unwrap();
+    let mut tx = state.pool.begin().await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
     let now = Utc::now().naive_utc();
 
     let pet_update = Pet {
@@ -207,36 +228,50 @@ pub async fn update_pet(
         last_geohash: geohash,
     };
 
-    let rows = PetRepository::update(&mut *tx, &id, &pet_update).await.unwrap();
+    let rows = PetRepository::update(&mut *tx, &id, &pet_update).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
 
     if rows == 0 {
-        return (StatusCode::NOT_FOUND, "Mascota no encontrada").into_response();
+        return Err((StatusCode::NOT_FOUND, "Mascota no encontrada").into_response());
     }
 
     for res in media_results {
-        let media_type = if res.secure_url.contains(".mp4") { MediaType::SightingVideo } else { MediaType::SightingImage };
+        // let media_type = if res.secure_url.contains(".mp4") { MediaType::SightingVideo } else { MediaType::SightingImage };
+        let media_type = if res.secure_url.contains(".mp4") { 
+            "SightingVideo" 
+        } else { 
+            "SightingImage" 
+        };
         let media = Media {
             id: Uuid::new_v4().to_string(),
             url: res.secure_url,
             public_id: res.public_id,
-            r#type: media_type,
+            r#type: media_type.to_string(), 
             pet_id: id.clone(),
             latitude: None,
             longitude: None,
             geohash: None,
             created_at: now,
         };
-        MediaRepository::create(&mut *tx, &media).await.unwrap();
+        MediaRepository::create(&mut *tx, &media).await.map_err(|e| {
+            eprintln!("Error en BD: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        })?;
     }
 
-    tx.commit().await.unwrap();
+    tx.commit().await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
 
     // Notificar actualización (obteniendo el objeto completo actualizado)
     if let Ok(Some(full_pet)) = PetRepository::find_by_id(&state.pool, &id).await {
         let _ = state.rabbit_service.publish_event("pet.updated", &PetEvent::Updated { pet: full_pet }).await;
     }
 
-    StatusCode::OK.into_response()
+    Ok(StatusCode::OK.into_response())
 }
 
 /// Elimina una mascota y sus archivos en Cloudinary.
@@ -253,20 +288,26 @@ pub async fn update_pet(
 pub async fn delete_pet(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    let public_ids = MediaRepository::get_public_ids_by_pet_id(&state.pool, &id).await.unwrap();
+) -> Result<Response, Response> {
+    let public_ids = MediaRepository::get_public_ids_by_pet_id(&state.pool, &id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
 
     for pid in public_ids {
         let _ = state.cloudinary_service.delete_media(&pid).await;
     }
 
-    let rows = PetRepository::delete(&state.pool, &id).await.unwrap();
+    let rows = PetRepository::delete(&state.pool, &id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+    })?;
 
     if rows == 0 {
-        StatusCode::NOT_FOUND.into_response()
+        Ok(StatusCode::NOT_FOUND.into_response())
     } else {
         // Notificar eliminación
         let _ = state.rabbit_service.publish_event("pet.deleted", &PetEvent::Deleted { pet_id: id }).await;
-        StatusCode::OK.into_response()
+        Ok(StatusCode::OK.into_response())
     }
 }

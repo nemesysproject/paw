@@ -30,8 +30,19 @@ pub struct AppState {
 
 /// Crea el pool de conexiones a Postgres con reintentos.
 pub async fn connect_postgres() -> PgPool {
-    dotenvy::dotenv().ok();
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        eprintln!("❌ ERROR: La variable de entorno DATABASE_URL no está definida.");
+        eprintln!("--- Variables de entorno detectadas ---");
+        for (key, value) in std::env::vars() {
+            eprintln!("{}: {}", key, value);
+        }
+        eprintln!("---------------------------------------");
+        
+        // Intentar cargar .env local como último recurso
+        dotenvy::dotenv().ok();
+        std::env::var("DATABASE_URL").expect("DATABASE_URL no encontrada incluso tras cargar .env")
+    });
+
     let mut retry_count = 0;
     loop {
         match PgPool::connect(&database_url).await {
@@ -39,9 +50,9 @@ pub async fn connect_postgres() -> PgPool {
                 println!("✅ Postgres: Conexión establecida correctamente.");
                 return p;
             }
-            Err(_) if retry_count < 5 => {
+            Err(e) if retry_count < 10 => {
                 retry_count += 1;
-                println!("Postgres no está listo, reintentando ({}/5)...", retry_count);
+                println!("Postgres no está listo ({}), reintentando ({}/10)...", e, retry_count);
                 tokio::time::sleep(Duration::from_secs(2)).await;
             }
             Err(e) => panic!("No se pudo conectar a Postgres: {}", e),
@@ -49,40 +60,12 @@ pub async fn connect_postgres() -> PgPool {
     }
 }
 
-/// Construye el Router de la aplicación a partir de un pool ya inicializado.
-pub async fn create_app(pool: PgPool) -> Router {
-    dotenvy::dotenv().ok();
-
-    // Inicializar RabbitMQ
-    let rabbit_uri = std::env::var("RABBITMQ_URI").expect("RABBITMQ_URI must be set");
-    let mut retry_count = 0;
-    let rabbit_service = loop {
-        match RabbitMQService::new(&rabbit_uri).await {
-            Ok(s) => break Arc::new(s),
-            Err(_) if retry_count < 10 => {
-                retry_count += 1;
-                println!("RabbitMQ no está listo, reintentando ({}/10)...", retry_count);
-                tokio::time::sleep(Duration::from_secs(2)).await;
-            }
-            Err(e) => panic!("No se pudo conectar a RabbitMQ: {}", e),
-        }
-    };
-    println!("✅ RabbitMQ: Conexión establecida correctamente.");
-
-    // Inicializar MongoDB
-    let mongo_uri = std::env::var("MONGODB_URI").expect("MONGODB_URI must be set");
-    let mongo_db_name = std::env::var("MONGODB_DB_NAME").expect("MONGODB_DB_NAME must be set");
-    let mongo_service = loop {
-        match MongoDBService::new(&mongo_uri, &mongo_db_name).await {
-            Ok(s) => break Arc::new(s),
-            Err(_) => {
-                println!("MongoDB no está listo, reintentando...");
-                tokio::time::sleep(Duration::from_secs(2)).await;
-            }
-        }
-    };
-    println!("✅ MongoDB: Conexión establecida correctamente.");
-
+/// Construye el Router de la aplicación a partir de servicios ya inicializados.
+pub async fn create_app(
+    pool: PgPool,
+    rabbit_service: Arc<RabbitMQService>,
+    mongo_service: Arc<MongoDBService>,
+) -> Router {
     let state = AppState {
         pool,
         cloudinary_service: Arc::new(CloudinaryService::new()),

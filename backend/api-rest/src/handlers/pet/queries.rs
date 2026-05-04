@@ -1,7 +1,7 @@
 use axum::{
     extract::{State, Path, Query},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     Json,
 };
 use crate::AppState;
@@ -25,15 +25,20 @@ use geohash::{encode, Coord, neighbors};
 pub async fn get_pet_by_id(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    let pet = PetRepository::find_by_id(&state.pool, &id).await.unwrap();
-
+) -> Result<Response, Response> {
+    let pet = PetRepository::find_by_id(&state.pool, &id).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
     match pet {
         Some(pet) => {
-            let media = MediaRepository::find_by_pet_id(&state.pool, &id).await.unwrap();
-            (StatusCode::OK, Json(PetDetailResponse { pet, media })).into_response()
+            let media = MediaRepository::find_by_pet_id(&state.pool, &id).await.map_err(|e| {
+                eprintln!("Error en BD: {:?}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+            })?;
+            Ok((StatusCode::OK, Json(PetDetailResponse { pet, media })).into_response())
         }
-        None => StatusCode::NOT_FOUND.into_response(),
+        None => Ok(StatusCode::NOT_FOUND.into_response()),
     }
 }
 
@@ -48,9 +53,12 @@ pub async fn get_pet_by_id(
 )]
 pub async fn list_pets(
     State(state): State<AppState>,
-) -> impl IntoResponse {
-    let pets = PetRepository::find_all(&state.pool).await.unwrap();
-    (StatusCode::OK, Json(pets)).into_response()
+) -> Result<Response, Response> {
+    let pets = PetRepository::find_all(&state.pool).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok((StatusCode::OK, Json(pets)).into_response())
 }
 
 /// Busca mascotas por ubicación (100m, 1km, 5km).
@@ -66,13 +74,16 @@ pub async fn list_pets(
 pub async fn search_pets_by_location(
     State(state): State<AppState>,
     Query(params): Query<SearchParams>,
-) -> impl IntoResponse {
+) -> Result<Response, Response> {
     let radius = params.radius_meters.unwrap_or(1000);
     let search_patterns = get_geohash_prefixes(params.lat, params.lon, radius);
     
-    let pets = PetRepository::find_by_geohash_prefixes(&state.pool, &search_patterns).await.unwrap();
+    let pets = PetRepository::find_by_geohash_prefixes(&state.pool, &search_patterns).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
 
-    (StatusCode::OK, Json(pets)).into_response()
+    Ok((StatusCode::OK, Json(pets)).into_response())
 }
 
 fn get_geohash_prefixes(lat: f64, lon: f64, radius_meters: u32) -> Vec<String> {

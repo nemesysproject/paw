@@ -20,15 +20,26 @@ pub struct CloudinaryService {
 }
 
 impl CloudinaryService {
+    // pub fn new() -> Self {
+    //     // En un entorno de producción, es preferible inyectar esto desde un config
+    //     Self {
+    //         client: Client::new(),
+    //         cloud_name: env::var("CLOUDINARY_CLOUD_NAME").unwrap_or_default(),
+    //         api_key: env::var("CLOUDINARY_API_KEY").unwrap_or_default(),
+    //         api_secret: env::var("CLOUDINARY_API_SECRET").unwrap_or_default(),
+    //     }
+    // }
+
     pub fn new() -> Self {
-        // En un entorno de producción, es preferible inyectar esto desde un config
+        // Usa expect para asegurar que las variables existan al iniciar
         Self {
             client: Client::new(),
-            cloud_name: env::var("CLOUDINARY_CLOUD_NAME").unwrap_or_default(),
-            api_key: env::var("CLOUDINARY_API_KEY").unwrap_or_default(),
-            api_secret: env::var("CLOUDINARY_API_SECRET").unwrap_or_default(),
+            cloud_name: env::var("CLOUDINARY_CLOUD_NAME").expect("CLOUDINARY_CLOUD_NAME no definida"),
+            api_key: env::var("CLOUDINARY_API_KEY").expect("CLOUDINARY_API_KEY no definida"),
+            api_secret: env::var("CLOUDINARY_API_SECRET").expect("CLOUDINARY_API_SECRET no definida"),
         }
     }
+
 
     /// Sube una imagen o video a Cloudinary utilizando una petición firmada.
     pub async fn upload_media(
@@ -61,7 +72,9 @@ impl CloudinaryService {
             .text("signature", signature)
             .text("folder", folder.to_string());
 
-        let url = format!("https://api.cloudinary.com/v1_1/{}/auto/upload", self.cloud_name);
+        //let url = format!("https://api.cloudinary.com/v1_1/{}/auto/upload", self.cloud_name);
+        let url = format!("https://api.cloudinary.com/v1_1/{}/image/upload", self.cloud_name);
+        println!("Enviando a: {}", url); 
 
         // 4. Enviar Petición
         let response = self.client
