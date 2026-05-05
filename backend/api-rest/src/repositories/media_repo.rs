@@ -47,4 +47,18 @@ impl MediaRepository {
         use sqlx::Row;
         Ok(rows.into_iter().map(|r| r.get("publicId")).collect())
     }
+
+    pub async fn find_by_pet_ids<'a, E>(executor: E, pet_ids: &[String]) -> Result<Vec<Media>, sqlx::Error> 
+    where E: Executor<'a, Database = Postgres>
+    {
+        sqlx::query_as::<_, Media>(
+            r#"SELECT id, url, "publicId" as public_id, type as "type", "petId" as pet_id, latitude, longitude, geohash, "createdAt" as created_at 
+               FROM "Media" 
+               WHERE "petId" = ANY($1) 
+               ORDER BY "createdAt" DESC"#
+        )
+        .bind(pet_ids)
+        .fetch_all(executor)
+        .await
+    }
 }

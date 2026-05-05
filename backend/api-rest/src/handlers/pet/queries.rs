@@ -47,7 +47,7 @@ pub async fn get_pet_by_id(
     get,
     path = "/api/v1/pets",
     responses(
-        (status = 200, description = "Lista de mascotas", body = [Pet]),
+        (status = 200, description = "Lista de mascotas", body = [PetDetailResponse]),
     ),
     tag = "Pets"
 )]
@@ -58,7 +58,22 @@ pub async fn list_pets(
         eprintln!("Error en BD: {:?}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
     })?;
-    Ok((StatusCode::OK, Json(pets)).into_response())
+
+    let pet_ids: Vec<String> = pets.iter().map(|p| p.id.clone()).collect();
+    let all_media = MediaRepository::find_by_pet_ids(&state.pool, &pet_ids).await.map_err(|e| {
+        eprintln!("Error en BD (media): {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+
+    let response: Vec<PetDetailResponse> = pets.into_iter().map(|pet| {
+        let media = all_media.iter()
+            .filter(|m| m.pet_id == pet.id)
+            .cloned()
+            .collect();
+        PetDetailResponse { pet, media }
+    }).collect();
+
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 /// Busca mascotas por ubicación (100m, 1km, 5km).
@@ -67,7 +82,7 @@ pub async fn list_pets(
     path = "/api/v1/pets/search",
     params(SearchParams),
     responses(
-        (status = 200, description = "Mascotas encontradas", body = [Pet]),
+        (status = 200, description = "Mascotas encontradas", body = [PetDetailResponse]),
     ),
     tag = "Pets"
 )]
@@ -83,7 +98,21 @@ pub async fn search_pets_by_location(
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
     })?;
 
-    Ok((StatusCode::OK, Json(pets)).into_response())
+    let pet_ids: Vec<String> = pets.iter().map(|p| p.id.clone()).collect();
+    let all_media = MediaRepository::find_by_pet_ids(&state.pool, &pet_ids).await.map_err(|e| {
+        eprintln!("Error en BD (media): {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+
+    let response: Vec<PetDetailResponse> = pets.into_iter().map(|pet| {
+        let media = all_media.iter()
+            .filter(|m| m.pet_id == pet.id)
+            .cloned()
+            .collect();
+        PetDetailResponse { pet, media }
+    }).collect();
+
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 fn get_geohash_prefixes(lat: f64, lon: f64, radius_meters: u32) -> Vec<String> {
