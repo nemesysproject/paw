@@ -1,0 +1,57 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+
+/* --- Design Tokens (Premium Palette) --- */
+:root {
+  --paw-primary: #6366f1;
+  --paw-primary-dark: #4f46e5;
+  --paw-secondary: #f43f5e;
+  --paw-bg-main: #f8fafc;
+  --paw-sidebar-bg: #1e293b;
+  --paw-sidebar-text: #94a3b8;
+  --paw-sidebar-active: #ffffff;
+  --paw-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --paw-radius: 12px;
+}
+
+/* --- Global Reset & Base --- */
+body {
+  background-color: var(--paw-bg-main);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #334155;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Custom Bootstrap Overrides --- */
+.btn-primary {
+  background-color: var(--paw-primary);
+  border-color: var(--paw-primary);
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--paw-primary-dark);
+  border-color: var(--paw-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.card {
+  border: none;
+  border-radius: var(--paw-radius);
+  box-shadow: var(--paw-card-shadow);
+}
+
+/* --- Layout Base Styles --- */
+.main-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+.content-area {
+  flex-grow: 1;
+  padding: 2rem;
+  transition: margin 0.3s ease;
+}

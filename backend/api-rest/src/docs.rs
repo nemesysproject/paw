@@ -7,6 +7,8 @@ use crate::handlers::pet::commands as pet_handlers;
 use crate::handlers::pet::queries as pet_queries;
 use crate::handlers::catalog::commands as catalog_handlers;
 use crate::handlers::catalog::queries as catalog_queries;
+use crate::handlers::auth as auth_handlers;
+use crate::models::auth::*;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -29,6 +31,11 @@ use crate::handlers::catalog::queries as catalog_queries;
         catalog_queries::get_species_by_id,
         catalog_queries::get_breed_by_id,
         catalog_queries::get_breeds_by_species,
+        catalog_queries::get_all_genders,
+        catalog_queries::get_all_statuses,
+        auth_handlers::register,
+        auth_handlers::login,
+        auth_handlers::refresh,
     ),
     components(
         schemas(
@@ -36,13 +43,15 @@ use crate::handlers::catalog::queries as catalog_queries;
             User, Species, Breed, Pet, Media, Shelter, Veterinary,
             CreatePetCommand, UpdatePetCommand, crate::models::pet::queries::PetDetailResponse,
             CreateSpeciesCommand, UpdateSpeciesCommand, CreateBreedCommand, UpdateBreedCommand,
-            BreedQuery
+            BreedQuery,
+            RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
         )
     ),
     tags(
         (name = "Health", description = "Endpoints de estado del sistema"),
         (name = "Pets", description = "Gestión de mascotas y avistamientos"),
-        (name = "Catalogs", description = "Gestión de especies y razas")
+        (name = "Catalogs", description = "Gestión de especies y razas"),
+        (name = "Auth", description = "Autenticación y gestión de usuarios")
     ),
     info(
         title = "Save Puppy API",

@@ -6,7 +6,7 @@ use axum::{
 };
 use crate::AppState;
 use crate::repositories::catalog_repo::CatalogRepository;
-use crate::models::entities::{Species, Breed};
+use crate::models::entities::{Species, Breed, PetGender, PetStatus};
 use crate::models::catalog::queries::BreedQuery;
 
 #[utoipa::path(
@@ -106,4 +106,40 @@ pub async fn get_breeds_by_species(
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
     })?;
     Ok(Json(breeds).into_response())
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/catalogs/genders",
+    responses(
+        (status = 200, description = "Lista de géneros de mascotas", body = [PetGender])
+    ),
+    tag = "Catalogs"
+)]
+pub async fn get_all_genders(
+    State(state): State<AppState>,
+) -> Result<Response, Response> {
+    let genders = CatalogRepository::get_all_genders(&state.pool).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok(Json(genders).into_response())
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/catalogs/statuses",
+    responses(
+        (status = 200, description = "Lista de estados de mascotas", body = [PetStatus])
+    ),
+    tag = "Catalogs"
+)]
+pub async fn get_all_statuses(
+    State(state): State<AppState>,
+) -> Result<Response, Response> {
+    let statuses = CatalogRepository::get_all_statuses(&state.pool).await.map_err(|e| {
+        eprintln!("Error en BD: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    })?;
+    Ok(Json(statuses).into_response())
 }

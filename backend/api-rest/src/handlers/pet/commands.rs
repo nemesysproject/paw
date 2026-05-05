@@ -7,7 +7,6 @@ use axum::{
 use serde_json::json;
 use crate::AppState;
 use crate::models::pet::commands::{CreatePetCommand, UpdatePetCommand};
-use crate::models::enums::MediaType;
 use crate::models::entities::{Pet, Media};
 use crate::models::events::PetEvent;
 use crate::repositories::pet_repo::PetRepository;
@@ -15,6 +14,7 @@ use crate::repositories::media_repo::MediaRepository;
 use uuid::Uuid;
 use geohash::{encode, Coord};
 use chrono::Utc;
+use crate::infrastructure::auth::JwtMiddleware;
 
 
 /// Registra una nueva mascota con fotos/videos.
@@ -30,6 +30,7 @@ use chrono::Utc;
     tag = "Pets"
 )]
 pub async fn create_pet(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> Result<Response, Response> {
@@ -45,26 +46,37 @@ pub async fn create_pet(
         } else {
             let text = field.text().await.unwrap_or_default();
             if !text.is_empty() && text != "null" {
-                // Intentar parsear como valor JSON (número, bool, etc.) o tratarlo como string
-                let val = serde_json::from_str::<serde_json::Value>(&text)
-                    .unwrap_or_else(|_| serde_json::Value::String(text));
+                // Solo intentamos parsear como número si el campo es de tipo numérico conocido.
+                // Esto evita que IDs como "1" sean convertidos a integer y fallen al mapear a String.
+                let val = if name == "last_latitude" || name == "last_longitude" {
+                    text.parse::<f64>().map(|n| json!(n)).unwrap_or_else(|_| json!(text))
+                } else if text.starts_with('{') || text.starts_with('[') {
+                    serde_json::from_str::<serde_json::Value>(&text).unwrap_or_else(|_| json!(text))
+                } else {
+                    json!(text)
+                };
                 
                 command_map.insert(name, val);
             }
         }
     }
 
-    let command: CreatePetCommand = match serde_json::from_value(serde_json::Value::Object(command_map)) {
+    let command: CreatePetCommand = match serde_json::from_value(serde_json::Value::Object(command_map.clone())) {
         Ok(c) => c,
-        Err(e) => return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response()),
+        Err(e) => {
+            tracing::error!("Error parseando datos de mascota: {}. Datos recibidos: {:?}", e, command_map);
+            return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response());
+        }
     };
 
     if files.is_empty() {
+        tracing::warn!("Rechazando creación de mascota: No se enviaron archivos.");
         return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Se requiere al menos una imagen"}))).into_response());
     }
 
     for (data, _) in &files {
         if infer::get(data).map_or(true, |k| k.matcher_type() != infer::MatcherType::Image && k.matcher_type() != infer::MatcherType::Video) {
+            tracing::warn!("Rechazando creación de mascota: Tipo de archivo no permitido.");
             return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Archivo inválido"}))).into_response());
         }
     }
@@ -162,6 +174,7 @@ pub async fn create_pet(
     tag = "Pets"
 )]
 pub async fn update_pet(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Path(id): Path<String>,
     mut multipart: Multipart,
@@ -178,9 +191,13 @@ pub async fn update_pet(
         } else {
             let text = field.text().await.unwrap_or_default();
             if !text.is_empty() && text != "null" {
-                // Intentar parsear como valor JSON (número, bool, etc.) o tratarlo como string
-                let val = serde_json::from_str::<serde_json::Value>(&text)
-                    .unwrap_or_else(|_| serde_json::Value::String(text));
+                let val = if name == "last_latitude" || name == "last_longitude" {
+                    text.parse::<f64>().map(|n| json!(n)).unwrap_or_else(|_| json!(text))
+                } else if text.starts_with('{') || text.starts_with('[') {
+                    serde_json::from_str::<serde_json::Value>(&text).unwrap_or_else(|_| json!(text))
+                } else {
+                    json!(text)
+                };
                 
                 command_map.insert(name, val);
             }
@@ -286,6 +303,7 @@ pub async fn update_pet(
     tag = "Pets"
 )]
 pub async fn delete_pet(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Response, Response> {

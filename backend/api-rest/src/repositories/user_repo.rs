@@ -1,31 +1,36 @@
-use sqlx::PgPool;
+use sqlx::{Postgres, Executor};
 use crate::models::entities::User;
 
-pub struct UserRepository<'a> {
-    pool: &'a PgPool,
-}
+pub struct UserRepository;
 
-impl<'a> UserRepository<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
-        Self { pool }
+impl UserRepository {
+    pub async fn find_by_email<'a, E>(executor: E, email: &str) -> Result<Option<User>, sqlx::Error> 
+    where E: Executor<'a, Database = Postgres>
+    {
+        sqlx::query_as::<_, User>(
+            r#"SELECT id, email, password, name, role, "createdAt" as created_at, "updatedAt" as updated_at FROM "User" WHERE email = $1"#
+        )
+        .bind(email)
+        .fetch_optional(executor)
+        .await
     }
 
-    pub async fn find_by_id(&self, id: String) -> Result<Option<User>, sqlx::Error> {
+    pub async fn find_by_id<'a, E>(executor: E, id: &str) -> Result<Option<User>, sqlx::Error> 
+    where E: Executor<'a, Database = Postgres>
+    {
         sqlx::query_as::<_, User>(
             r#"SELECT id, email, password, name, role, "createdAt" as created_at, "updatedAt" as updated_at FROM "User" WHERE id = $1"#
         )
         .bind(id)
-        .fetch_optional(self.pool)
+        .fetch_optional(executor)
         .await
     }
 
-    // El ID se asume generado por Prisma (uuid) pero en insert lo podemos dejar delegar o pasar explícito
-    pub async fn create(&self, user: &User) -> Result<(), sqlx::Error> {
+    pub async fn create<'a, E>(executor: E, user: &User) -> Result<(), sqlx::Error> 
+    where E: Executor<'a, Database = Postgres>
+    {
         sqlx::query(
-            r#"
-            INSERT INTO "User" (id, email, password, name, role, "createdAt", "updatedAt")
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            "#
+            r#"INSERT INTO "User" (id, email, password, name, role, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7)"#
         )
         .bind(&user.id)
         .bind(&user.email)
@@ -34,7 +39,7 @@ impl<'a> UserRepository<'a> {
         .bind(&user.role)
         .bind(user.created_at)
         .bind(user.updated_at)
-        .execute(self.pool)
+        .execute(executor)
         .await?;
         Ok(())
     }

@@ -3,6 +3,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
+use tower_http::cors::{Any, CorsLayer};
+use axum::http::Method;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -74,12 +76,18 @@ pub async fn create_app(
     };
 
     // Construir la aplicación (Rutas y Middleware)
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers(Any);
+
     Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .route("/health", get(health_check))
         .nest("/api/v1", routes::api_routes())
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+        .layer(cors)
 }
 
 /// Verifica que el servicio esté vivo.

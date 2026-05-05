@@ -1,5 +1,5 @@
 use sqlx::{Postgres, Executor};
-use crate::models::entities::{Species, Breed, PetGender, PetStatus, MediaTypeEntity};
+use crate::models::entities::{Species, Breed, PetGender, PetStatus, MediaTypeEntity, UserRole};
 
 pub struct CatalogRepository;
 
@@ -201,6 +201,19 @@ impl CatalogRepository {
         )
         .bind(&media_type.id)
         .bind(&media_type.name)
+        .execute(executor)
+        .await?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    pub async fn upsert_user_role<'a, E>(executor: E, user_role: &UserRole) -> Result<bool, sqlx::Error>
+    where E: Executor<'a, Database = Postgres>
+    {
+        let res = sqlx::query(
+            r#"INSERT INTO "UserRole" (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING"#
+        )
+        .bind(&user_role.id)
+        .bind(&user_role.name)
         .execute(executor)
         .await?;
         Ok(res.rows_affected() > 0)

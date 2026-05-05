@@ -14,4 +14,7 @@ pub fn catalog_routes() -> Router<AppState> {
         .route("/species/:id/breeds", get(queries::get_breeds_by_species))
         .route("/breeds", get(queries::get_all_breeds).post(commands::create_breed))
         .route("/breeds/:id", get(queries::get_breed_by_id).put(commands::update_breed).delete(commands::delete_breed))
+        // Genders & Statuses
+        .route("/genders", get(queries::get_all_genders))
+        .route("/statuses", get(queries::get_all_statuses))
 }

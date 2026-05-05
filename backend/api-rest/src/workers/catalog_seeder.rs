@@ -2,8 +2,13 @@ use sqlx::PgPool;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::models::entities::{Breed, Species, PetGender, PetStatus, MediaTypeEntity};
+use crate::models::entities::{Breed, Species, PetGender, PetStatus, MediaTypeEntity, UserRole};
 use crate::repositories::catalog_repo::CatalogRepository;
+
+static ROLES: &[(&str, &str)] = &[
+    ("USER", "Usuario Estándar"),
+    ("ADMIN", "Administrador de Sistema"),
+];
 
 static MEDIA_TYPES: &[(&str, &str)] = &[
     ("ReferencePhoto", "Foto de Referencia"),
@@ -91,6 +96,16 @@ pub async fn run_catalog_seed(pool: &PgPool) -> Result<(), sqlx::Error> {
     let mut breeds_inserted = 0u32;
     let mut genders_inserted = 0u32;
     let mut statuses_inserted = 0u32;
+    let mut roles_inserted = 0u32;
+
+    // 0. Roles
+    for (id, name) in ROLES {
+        let role = UserRole { id: id.to_string(), name: name.to_string() };
+        if CatalogRepository::upsert_user_role(pool, &role).await? {
+            info!("  ✅ Rol insertado: {}", name);
+            roles_inserted += 1;
+        }
+    }
 
     // 1. Genders
     for (id, name) in GENDERS {
@@ -175,8 +190,8 @@ pub async fn run_catalog_seed(pool: &PgPool) -> Result<(), sqlx::Error> {
     }
 
     info!(
-        "🌱 Seeder completado — Especies: {}, Razas: {}, Géneros: {}, Estados: {}",
-        species_inserted, breeds_inserted, genders_inserted, statuses_inserted
+        "🌱 Seeder completado — Especies: {}, Razas: {}, Géneros: {}, Estados: {}, Roles: {}, Tipos Medio: {}",
+        species_inserted, breeds_inserted, genders_inserted, statuses_inserted, roles_inserted, media_types_inserted
     );
     Ok(())
 }

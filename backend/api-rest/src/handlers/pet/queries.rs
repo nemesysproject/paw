@@ -5,7 +5,6 @@ use axum::{
     Json,
 };
 use crate::AppState;
-use crate::models::entities::Pet;
 use crate::models::pet::queries::{SearchParams, PetDetailResponse};
 use crate::repositories::pet_repo::PetRepository;
 use crate::repositories::media_repo::MediaRepository;

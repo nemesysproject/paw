@@ -9,6 +9,7 @@ use crate::models::catalog::commands::{CreateSpeciesCommand, UpdateSpeciesComman
 use crate::models::entities::{Species, Breed};
 use crate::repositories::catalog_repo::CatalogRepository;
 use uuid::Uuid;
+use crate::infrastructure::auth::JwtMiddleware;
 
 // --- Species ---
 
@@ -23,6 +24,7 @@ use uuid::Uuid;
     tag = "Catalogs"
 )]
 pub async fn create_species(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Json(command): Json<CreateSpeciesCommand>,
 ) -> Result<Response, Response> {
@@ -50,6 +52,7 @@ pub async fn create_species(
     tag = "Catalogs"
 )]
 pub async fn update_species(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(command): Json<UpdateSpeciesCommand>,
@@ -77,6 +80,7 @@ pub async fn update_species(
     tag = "Catalogs"
 )]
 pub async fn delete_species(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Response, Response> {
@@ -100,6 +104,7 @@ pub async fn delete_species(
     tag = "Catalogs"
 )]
 pub async fn create_breed(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Json(command): Json<CreateBreedCommand>,
 ) -> Result<Response, Response> {
@@ -128,6 +133,7 @@ pub async fn create_breed(
     tag = "Catalogs"
 )]
 pub async fn update_breed(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(command): Json<UpdateBreedCommand>,
@@ -156,6 +162,7 @@ pub async fn update_breed(
     tag = "Catalogs"
 )]
 pub async fn delete_breed(
+    _auth: JwtMiddleware,
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Response, Response> {
