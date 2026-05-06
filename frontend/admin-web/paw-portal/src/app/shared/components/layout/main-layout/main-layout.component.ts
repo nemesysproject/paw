@@ -41,13 +41,19 @@ import { AuthService } from '@core/services/auth.service';
             <lucide-icon name="dog" class="nav-icon"></lucide-icon>
             <span class="nav-label" *ngIf="!isSidebarCollapsed">Mascotas</span>
           </a>
+
+          <a class="nav-section-title" routerLink="/shelters" routerLinkActive="active" class="nav-item">
+            <lucide-icon name="home" class="nav-icon"></lucide-icon>
+            <span class="nav-label" *ngIf="!isSidebarCollapsed">Refugios</span>
+          </a>
+
           <a routerLink="/users" routerLinkActive="active" class="nav-item">
             <lucide-icon name="users" class="nav-icon"></lucide-icon>
             <span class="nav-label" *ngIf="!isSidebarCollapsed">Usuarios</span>
           </a>
 
           <div class="nav-section-title" *ngIf="!isSidebarCollapsed">SISTEMA</div>
-          <a routerLink="/catalogs" routerLinkActive="active" class="nav-item">
+          <a routerLink="/config" routerLinkActive="active" class="nav-item">
             <lucide-icon name="settings" class="nav-icon"></lucide-icon>
             <span class="nav-label" *ngIf="!isSidebarCollapsed">Configuración</span>
           </a>

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardService, DashboardResponse } from '@core/services/dashboard.service';
-import { Loader } from '@googlemaps/js-api-loader';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { environment } from '@env/environment';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -19,7 +19,7 @@ import { LucideAngularModule } from 'lucide-angular';
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
                   <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Perdidos</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats.total_lost }}</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats?.total_lost || 0 }}</div>
                 </div>
                 <div class="col-auto">
                   <lucide-icon name="search" size="32" class="text-gray-300"></lucide-icon>
@@ -35,7 +35,7 @@ import { LucideAngularModule } from 'lucide-angular';
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
                   <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Encontrados</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats.total_found }}</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats?.total_found || 0 }}</div>
                 </div>
                 <div class="col-auto">
                   <lucide-icon name="check-circle" size="32" class="text-gray-300"></lucide-icon>
@@ -51,7 +51,7 @@ import { LucideAngularModule } from 'lucide-angular';
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
                   <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Adoptados</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats.total_adopted }}</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats?.total_adopted || 0 }}</div>
                 </div>
                 <div class="col-auto">
                   <lucide-icon name="heart" size="32" class="text-gray-300"></lucide-icon>
@@ -67,7 +67,7 @@ import { LucideAngularModule } from 'lucide-angular';
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
                   <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Total Sistema</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats.total_pets }}</div>
+                  <div class="h5 mb-0 font-weight-bold text-gray-800">{{ data.stats?.total_pets || 0 }}</div>
                 </div>
                 <div class="col-auto">
                   <lucide-icon name="dog" size="32" class="text-gray-300"></lucide-icon>
@@ -116,7 +116,7 @@ import { LucideAngularModule } from 'lucide-angular';
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   @ViewChild('mapContainer') mapContainer!: ElementRef;
-  
+
   dashboardData = signal<DashboardResponse | null>(null);
   map!: google.maps.Map;
 
@@ -135,36 +135,36 @@ export class DashboardComponent implements OnInit {
   }
 
   async initMap(data: DashboardResponse) {
-    const loader = new Loader({
-      apiKey: environment.googleMapKey,
-      version: 'weekly',
+    setOptions({
+      key: environment.googleMapKey,
+      v: 'weekly',
     });
 
-    const { Map } = await loader.importLibrary('maps');
-    const { Marker } = await loader.importLibrary('marker') as google.maps.MarkerLibrary;
+    const { Map, InfoWindow } = await importLibrary('maps');
+    const { Marker } = await importLibrary('marker');
 
-    const center = { lat: 19.4326, lng: -99.1332 }; // CDMX default
+    const center = await this.getCurrentLocation();
 
     this.map = new Map(this.mapContainer.nativeElement, {
       center: center,
-      zoom: 12,
+      zoom: 13,
       mapId: 'PAW_DASHBOARD_MAP',
     });
 
-    data.locations.forEach(loc => {
+    (data.locations || []).forEach(loc => {
       if (loc.last_latitude && loc.last_longitude) {
-        const marker = new google.maps.Marker({
+        const marker = new Marker({
           position: { lat: loc.last_latitude, lng: loc.last_longitude },
           map: this.map,
           title: loc.name || 'Mascota sin nombre',
           icon: {
-            url: loc.status === 'LOST' ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' : 
-                 loc.status === 'FOUND' ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' : 
-                 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            url: loc.status === 'LOST' ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' :
+              loc.status === 'FOUND' ? 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' :
+                'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
           }
         });
 
-        const infoWindow = new google.maps.InfoWindow({
+        const infoWindow = new InfoWindow({
           content: `
             <div style="padding: 10px; max-width: 200px;">
               <h6 style="margin-bottom: 5px;">${loc.name || 'Sin nombre'}</h6>
@@ -177,6 +177,26 @@ export class DashboardComponent implements OnInit {
         marker.addListener('click', () => {
           infoWindow.open(this.map, marker);
         });
+      }
+    });
+  }
+
+  private getCurrentLocation(): Promise<google.maps.LatLngLiteral> {
+    return new Promise((resolve) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          () => {
+            resolve({ lat: 19.4326, lng: -99.1332 }); // CDMX fallback
+          }
+        );
+      } else {
+        resolve({ lat: 19.4326, lng: -99.1332 }); // CDMX fallback
       }
     });
   }

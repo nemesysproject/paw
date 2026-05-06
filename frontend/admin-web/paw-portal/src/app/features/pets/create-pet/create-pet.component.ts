@@ -207,6 +207,7 @@ export class CreatePetComponent implements OnInit {
 
   ngOnInit() {
     this.loadCatalogs();
+    this.getUserLocation();
     
     // Asignar el reporter_id del usuario actual de forma reactiva
     const user = this.auth.currentUser();
@@ -215,6 +216,22 @@ export class CreatePetComponent implements OnInit {
     } else {
       // Si no hay usuario (caso anónimo o carga lenta), podrías poner 'anonimo' como en el ejemplo
       this.petForm.patchValue({ reporter_id: 'anonimo' });
+    }
+  }
+
+  private getUserLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          this.petForm.patchValue({
+            last_latitude: position.coords.latitude,
+            last_longitude: position.coords.longitude
+          } as any);
+        },
+        (error) => {
+          console.warn('No se pudo obtener la ubicación del usuario:', error);
+        }
+      );
     }
   }
 
