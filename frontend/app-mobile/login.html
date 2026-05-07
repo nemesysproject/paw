@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Iniciar Sesión - Rescate Mascotas</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script type="module" src="/src/login.ts" defer></script>
+  </head>
+
+  <body>
+    <main class="auth-container">
+      <div class="auth-card">
+        <i class="ph ph-paw-print auth-logo"></i>
+        <h1 class="auth-title">Bienvenido de nuevo</h1>
+        <p class="auth-subtitle">Inicia sesión para continuar</p>
+
+        <form class="auth-form" id="login-form">
+          <div class="form-group">
+            <label for="email">Correo Electrónico</label>
+            <div class="input-icon-wrapper">
+              <i class="ph ph-envelope-simple"></i>
+              <input type="email" id="email" placeholder="tu@correo.com" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <div class="input-icon-wrapper">
+              <i class="ph ph-lock-key"></i>
+              <input type="password" id="password" placeholder="••••••••" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Iniciar Sesión</button>
+        </form>
+
+        <div class="auth-footer">
+          ¿No tienes una cuenta? <a href="/register.html" class="auth-link">Regístrate</a>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

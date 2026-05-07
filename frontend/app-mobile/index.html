@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Rescate Mascotas</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <!-- App Bar -->
+    <header class="app-bar">
+      <div class="logo-container">
+        <i class="ph ph-paw-print"></i>
+        <h1>Rescate Mascotas</h1>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Search Section -->
+      <section class="search-section">
+        <div class="search-bar">
+          <i class="ph ph-magnifying-glass search-icon"></i>
+          <input type="text" placeholder="Buscar por nombre, raza, descripción..." id="search-input" />
+          <button class="btn-filter" id="btn-toggle-filters">
+            <i class="ph ph-faders"></i> Filtros
+          </button>
+        </div>
+      </section>
+
+      <!-- Filters Section -->
+      <section class="filters-section" id="filters-panel">
+        <div class="filter-group">
+          <label>Estado</label>
+          <div class="select-wrapper">
+            <select>
+              <option value="todos">Todos</option>
+              <option value="perdido">Perdido</option>
+              <option value="rescatado">Rescatado</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <label>Especie</label>
+          <div class="select-wrapper">
+            <select>
+              <option value="todas">Todas</option>
+              <option value="perro">Perro</option>
+              <option value="gato">Gato</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-group slider-group">
+          <div class="slider-header">
+            <label>Distancia máxima: <span id="distance-value">50</span> km</label>
+          </div>
+          <input type="range" min="1" max="100" value="50" class="slider" id="distance-slider">
+        </div>
+      </section>
+
+      <!-- Results Header -->
+      <div class="results-header">
+        <span id="results-count">0 mascotas encontradas</span>
+      </div>
+
+      <!-- Pet List -->
+      <div id="pet-list" class="pet-list">
+        <!-- Cards will be injected here by JS -->
+      </div>
+    </main>
+
+    <!-- Floating Action Button -->
+    <button class="fab" aria-label="Añadir mascota">
+      <i class="ph ph-plus"></i>
+    </button>
+  </body>
+</html>
