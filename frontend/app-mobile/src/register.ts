@@ -1,25 +1,20 @@
-window.addEventListener('DOMContentLoaded', () => {
-  const registerForm = document.getElementById('register-form');
-  const passwordInput = document.getElementById('password') as HTMLInputElement;
-  const confirmPasswordInput = document.getElementById('confirm-password') as HTMLInputElement;
-  const passwordError = document.getElementById('password-error');
+document.addEventListener('DOMContentLoaded', () => {
+  const registerForm = document.getElementById('register-form') as HTMLFormElement;
 
-  if (registerForm && passwordInput && confirmPasswordInput && passwordError) {
-    registerForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      if (passwordInput.value !== confirmPasswordInput.value) {
-        passwordError.style.display = 'block';
-        return;
-      }
-      
-      passwordError.style.display = 'none';
+  if (registerForm) {
+    registerForm.addEventListener('submit', (event) => {
+      event.preventDefault(); // Evita el envío del formulario por defecto
 
-      // Simulamos el registro exitoso
-      console.log('Creando cuenta...');
-      
-      // Redirigir a la pantalla principal
-      window.location.href = '/index.html';
+      const name = (document.getElementById('name') as HTMLInputElement).value;
+      const email = (document.getElementById('email') as HTMLInputElement).value;
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+      const confirmPassword = (document.getElementById('confirm-password') as HTMLInputElement).value;
+
+      console.log('Intento de registro:', { name, email, password, confirmPassword });
+      // Aquí se integraría la llamada a la API de Rust a través de Tauri
+      alert('Registro simulado. Revisa la consola para los datos.');
+      // En una aplicación real, redirigirías o manejarías la respuesta del backend
+      // window.location.href = '/login.html'; // Ejemplo de redirección
     });
   }
 });
