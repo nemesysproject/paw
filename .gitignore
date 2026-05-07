@@ -30,6 +30,8 @@ Cargo.lock
 .env
 .env.local
 .env.*.local
+environments
+environments.*
 
 # Node (Frontend)
 node_modules/

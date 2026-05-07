@@ -1,1 +1,43 @@
-<p>shelters works!</p>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Shelters</h1>
+        <div class="d-flex gap-3">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" (keyup)="applyFilter($event)" placeholder="Search by name or location">
+            </div>
+            <button class="btn btn-primary d-flex align-items-center gap-1 text-nowrap" (click)="openAddShelterDialog()">
+                <i class="bi bi-plus-lg"></i> Add Shelter
+            </button>
+        </div>
+    </div>
+
+    @if (shelters().length > 0) {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @for (shelter of shelters(); track shelter.id) {
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1">{{ shelter.name }}</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">{{ shelter.contactEmail }}</h6>
+                            <div class="card-text">
+                                <p class="mb-1"><span class="fw-bold">Phone:</span> {{ shelter.phone }}</p>
+                                <p class="mb-1"><span class="fw-bold">Location:</span> {{ shelter.location }}</p>
+                                <p class="mb-0"><span class="fw-bold">Capacity:</span> {{ shelter.capacity }}</p>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0 d-flex justify-content-end gap-2 pb-3">
+                            <button class="btn btn-outline-primary btn-sm" (click)="editShelter(shelter)">Edit</button>
+                            <button class="btn btn-outline-danger btn-sm" (click)="deleteShelter(shelter.id)">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    } @else {
+        <div class="text-center py-5 border rounded bg-light">
+            <i class="bi bi-building fs-1 text-secondary"></i>
+            <p class="lead mt-3">No shelters found. Use the "Add Shelter" button to create one.</p>
+        </div>
+    }
+</div>

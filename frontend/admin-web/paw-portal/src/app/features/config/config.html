@@ -1,1 +1,58 @@
-<p>config works!</p>
+<div class="container py-4">
+    <div class="mb-4">
+        <h1>Configuration</h1>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">General Settings</h2>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Application Name</label>
+                <input type="text" class="form-control" [(ngModel)]="config.appName">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Admin Email</label>
+                <input type="email" class="form-control" [(ngModel)]="config.adminEmail">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Default Language</label>
+                <input type="text" class="form-control" [(ngModel)]="config.defaultLanguage">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Items Per Page</label>
+                <input type="number" class="form-control" [(ngModel)]="config.itemsPerPage">
+            </div>
+
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="enableUserReg" [(ngModel)]="config.enableUserRegistration">
+                <label class="form-check-label" for="enableUserReg">Enable User Registration</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">API Settings</h2>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">API Base URL</label>
+                <input type="text" class="form-control" [(ngModel)]="config.apiBaseUrl">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Cloudinary Cloud Name</label>
+                <input type="text" class="form-control" [(ngModel)]="config.cloudinaryCloudName">
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid d-md-block">
+        <button class="btn btn-primary px-4" (click)="saveConfig()">Save Configuration</button>
+    </div>
+</div>
