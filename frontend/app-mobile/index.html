@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/styles/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Rescate Mascotas</title>
     <!-- Google Fonts -->
@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script type="module" src="/src/main.ts" defer></script>
+    <script type="module" src="/src/pages/home/home.ts" defer></script>
   </head>
 
   <body>
@@ -20,6 +20,14 @@
       <div class="logo-container">
         <i class="ph ph-paw-print"></i>
         <h1>Rescate Mascotas</h1>
+      </div>
+      <div class="nav-actions">
+        <a href="/src/pages/dashboard/dashboard.html" class="btn-icon-nav" title="Ver mapa">
+          <i class="ph ph-map-trifold"></i>
+        </a>
+        <button class="btn-icon-nav" id="btn-logout" title="Cerrar sesión">
+          <i class="ph ph-sign-out"></i>
+        </button>
       </div>
     </header>
 
@@ -79,7 +87,7 @@
     </main>
 
     <!-- Floating Action Button -->
-    <button class="fab" aria-label="Añadir mascota">
+    <button class="fab" id="btn-add-pet" aria-label="Añadir mascota" onclick="window.location.href='/src/pages/create-pet/create-pet.html'">
       <i class="ph ph-plus"></i>
     </button>
   </body>

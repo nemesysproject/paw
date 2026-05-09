@@ -11,8 +11,10 @@ export default defineConfig(async () => ({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        login: resolve(__dirname, 'login.html'),
-        register: resolve(__dirname, 'register.html')
+        login: resolve(__dirname, 'src/pages/login/login.html'),
+        register: resolve(__dirname, 'src/pages/register/register.html'),
+        dashboard: resolve(__dirname, 'src/pages/dashboard/dashboard.html'),
+        create_pet: resolve(__dirname, 'src/pages/create-pet/create-pet.html'),
       }
     }
   },
@@ -36,6 +38,13 @@ export default defineConfig(async () => ({
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
+    },
+    // Proxy API requests al backend a través de Nginx (Docker)
+    proxy: {
+      '/api': {
+        target: 'http://localhost',
+        changeOrigin: true,
+      },
     },
   },
 }));

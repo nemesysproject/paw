@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="/src/styles.css" />
+  <link rel="stylesheet" href="/src/styles/styles.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Iniciar Sesión - Rescate Mascotas</title>
   <!-- Google Fonts -->
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <script type="module" src="/src/login.ts" defer></script>
+  <script type="module" src="./login.ts" defer></script>
 </head>
 
 <body>
@@ -22,7 +22,7 @@
       <h2 class="auth-title">Bienvenido de nuevo</h2>
       <p class="auth-subtitle">Inicia sesión para continuar</p>
 
-      <form id="login-form" class="auth-form">
+      <form id="login-form" class="auth-form" method="POST" action="#">
         <div class="form-group">
           <label for="email">Correo electrónico</label>
           <div class="input-icon-wrapper">
@@ -42,8 +42,18 @@
         <button type="submit" class="btn-primary">Iniciar Sesión</button>
       </form>
 
+      <div id="biometric-login-container" class="hidden">
+        <div class="auth-divider">
+          <span>o accede con biometría</span>
+        </div>
+        <button type="button" id="btn-biometric" class="btn-outline">
+          <i class="ph ph-fingerprint"></i>
+          Usar Huella / Rostro
+        </button>
+      </div>
+
       <div class="auth-footer">
-        ¿No tienes una cuenta? <a href="/register.html" class="auth-link">Regístrate aquí</a>
+        ¿No tienes una cuenta? <a href="/src/pages/register/register.html" class="auth-link">Regístrate aquí</a>
       </div>
     </div>
   </main>

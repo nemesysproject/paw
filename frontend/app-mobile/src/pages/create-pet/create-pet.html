@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/src/styles/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Registrar Mascota - PAW</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script type="module" src="./create-pet.ts" defer></script>
+</head>
+
+<body>
+  <header class="app-bar">
+    <div class="nav-actions">
+      <a href="/index.html" class="btn-icon-nav">
+        <i class="ph ph-arrow-left"></i>
+      </a>
+      <h2>Registrar Mascota</h2>
+    </div>
+  </header>
+
+  <main class="container">
+    <form id="create-pet-form" class="auth-form" method="POST" action="#">
+      
+      <!-- Preview de Multimedia -->
+      <div class="media-upload-container">
+        <div id="media-preview-grid" class="media-grid">
+          <!-- Las miniaturas aparecerán aquí -->
+          <label for="media-input" class="media-add-card">
+            <i class="ph ph-camera-plus"></i>
+            <span>Añadir</span>
+          </label>
+        </div>
+        <input type="file" id="media-input" multiple accept="image/*,video/*" class="hidden" />
+        <p class="form-help">Mínimo 1 foto, máximo 10 archivos (Video máx 10MB)</p>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Nombre de la mascota</label>
+        <input type="text" id="name" name="name" placeholder="Ej: Firulais" required />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="species">Especie</label>
+          <select id="species" name="species_id" required>
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="breed">Raza</label>
+          <select id="breed" name="breed_id" disabled>
+            <option value="">Selecciona...</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="gender">Género</label>
+          <select id="gender" name="gender" required>
+            <option value="MALE">Macho</option>
+            <option value="FEMALE">Hembra</option>
+            <option value="UNKNOWN">No lo sé</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status">Estado</label>
+          <select id="status" name="status" required>
+            <option value="LOST">Perdido</option>
+            <option value="FOUND">Encontrado</option>
+            <option value="ADOPTED">Adoptado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Descripción / Señas particulares</label>
+        <textarea id="description" name="description" rows="3" placeholder="Color de collar, cicatrices, etc." required></textarea>
+      </div>
+
+      <div class="location-box">
+        <i class="ph ph-map-pin"></i>
+        <span id="location-status">Obteniendo ubicación...</span>
+      </div>
+
+      <button type="submit" id="btn-submit-pet" class="btn-primary" disabled>
+        Registrar Mascota
+      </button>
+    </form>
+  </main>
+</body>
+
+</html>

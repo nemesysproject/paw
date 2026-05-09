@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="/src/styles.css" />
+  <link rel="stylesheet" href="/src/styles/styles.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Registrarse - Rescate Mascotas</title>
   <!-- Google Fonts -->
@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <script type="module" src="/src/register.ts" defer></script>
+  <script type="module" src="./register.ts" defer></script>
 </head>
 
 <body>
@@ -22,7 +22,7 @@
       <h2 class="auth-title">Crea tu cuenta</h2>
       <p class="auth-subtitle">Únete a la comunidad de Rescate Mascotas</p>
 
-      <form id="register-form" class="auth-form">
+      <form id="register-form" class="auth-form" method="POST" action="#">
         <div class="form-group">
           <label for="name">Nombre completo</label>
           <div class="input-icon-wrapper">
@@ -59,7 +59,7 @@
       </form>
 
       <div class="auth-footer">
-        ¿Ya tienes una cuenta? <a href="/login.html" class="auth-link">Inicia sesión</a>
+        ¿Ya tienes una cuenta? <a href="/src/pages/login/login.html" class="auth-link">Inicia sesión</a>
       </div>
     </div>
   </main>

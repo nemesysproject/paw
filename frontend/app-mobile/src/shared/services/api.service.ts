@@ -1,0 +1,142 @@
+import { API_BASE_URL, STORAGE_KEYS, ROUTES } from './api.config';
+import type { TokenResponse } from '../models';
+
+/**
+ * Servicio HTTP centralizado con manejo automático de JWT.
+ * - Inyecta el header Authorization: Bearer <token>
+ * - Intenta auto-refresh si recibe un 401
+ */
+
+// ──────────────────────────────────────────────
+// Token Management
+// ──────────────────────────────────────────────
+
+export function getAccessToken(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+}
+
+export function saveTokens(tokens: TokenResponse): void {
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
+  localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+}
+
+export function isAuthenticated(): boolean {
+  return !!getAccessToken();
+}
+
+export function logout(): void {
+  clearTokens();
+  window.location.href = ROUTES.LOGIN;
+}
+
+// ──────────────────────────────────────────────
+// Auth Guard
+// ──────────────────────────────────────────────
+
+/** Redirige a login si no hay token. Llamar al inicio de páginas protegidas. */
+export function requireAuth(): void {
+  if (!isAuthenticated()) {
+    window.location.href = ROUTES.LOGIN;
+  }
+}
+
+// ──────────────────────────────────────────────
+// HTTP Helpers
+// ──────────────────────────────────────────────
+
+/** Flag para evitar loops infinitos de refresh */
+let isRefreshing = false;
+
+/**
+ * Fetch wrapper que inyecta el JWT y reintenta con refresh si recibe 401.
+ */
+export async function fetchWithAuth(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const headers = new Headers(options.headers || {});
+  const token = getAccessToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  // Si recibimos 401, intentar refresh una sola vez
+  if (response.status === 401 && !isRefreshing) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      // Re-intentar la petición original con el nuevo token
+      const retryHeaders = new Headers(options.headers || {});
+      retryHeaders.set('Authorization', `Bearer ${getAccessToken()}`);
+      if (!retryHeaders.has('Content-Type') && !(options.body instanceof FormData)) {
+        retryHeaders.set('Content-Type', 'application/json');
+      }
+      return fetch(url, { ...options, headers: retryHeaders });
+    } else {
+      // Refresh falló → forzar logout
+      logout();
+    }
+  }
+
+  return response;
+}
+
+/**
+ * Fetch sin autenticación para endpoints públicos (login, register).
+ */
+export async function fetchPublic(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return fetch(url, { ...options, headers });
+}
+
+// ──────────────────────────────────────────────
+// Token Refresh
+// ──────────────────────────────────────────────
+
+async function tryRefreshToken(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  isRefreshing = true;
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) return false;
+
+    const tokens: TokenResponse = await response.json();
+    saveTokens(tokens);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    isRefreshing = false;
+  }
+}
