@@ -1,47 +1,30 @@
-import { Stronghold, Client } from '@tauri-apps/plugin-stronghold';
-import { appDataDir } from '@tauri-apps/api/path';
-import { isTauri } from './platform.service';
-
 /**
  * Servicio de cifrado.
- * Utiliza Stronghold para proteger la llave maestra y Web Crypto API para cifrar datos.
+ * Utiliza localStorage para proteger la llave maestra y Web Crypto API para cifrar datos.
  */
 
-const VAULT_PATH = 'client_vault.hold';
 const MASTER_KEY_ID = 'master_encryption_key';
 
-let stronghold: Stronghold | null = null;
-let client: Client | null = null;
-
-async function initStronghold() {
-  if (!isTauri()) return { stronghold: null, client: null };
-  if (!stronghold) {
-    const path = `${await appDataDir()}/${VAULT_PATH}`;
-    stronghold = await Stronghold.load(path, 'password_de_la_boveda_temporal'); // En producción esto debería ser más dinámico
-    client = await stronghold.loadClient('main_client');
-  }
-  return { stronghold, client };
-}
-
 /**
- * Genera o recupera una Master Key desde Stronghold.
+ * Genera o recupera una Master Key desde localStorage.
  */
 async function getOrGenerateMasterKey(): Promise<Uint8Array> {
-  const { client } = await initStronghold();
-  if (!client) return new Uint8Array(32); // Fallback for non-tauri
+  const storedKey = window.localStorage.getItem(MASTER_KEY_ID);
   
-  const store = client.getStore();
-  
-  let key = await store.get(MASTER_KEY_ID);
-  
-  if (!key) {
+  if (storedKey) {
+    const binaryString = atob(storedKey);
+    const keyBytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      keyBytes[i] = binaryString.charCodeAt(i);
+    }
+    return keyBytes;
+  } else {
     // Generar nueva llave aleatoria de 32 bytes (256 bits)
     const newKey = window.crypto.getRandomValues(new Uint8Array(32));
-    await store.insert(MASTER_KEY_ID, Array.from(newKey));
-    key = newKey;
+    const base64Key = btoa(String.fromCharCode(...Array.from(newKey)));
+    window.localStorage.setItem(MASTER_KEY_ID, base64Key);
+    return newKey;
   }
-  
-  return key;
 }
 
 /**

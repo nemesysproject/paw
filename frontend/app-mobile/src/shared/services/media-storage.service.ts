@@ -1,5 +1,6 @@
-import { BaseDirectory, writeFile, remove, exists, mkdir } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, writeFile, remove, exists, mkdir, copyFile } from '@tauri-apps/plugin-fs';
 import { appDataDir } from '@tauri-apps/api/path';
+import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from './platform.service';
 
 /**
@@ -26,6 +27,26 @@ export async function saveMediaLocally(fileName: string, data: Uint8Array): Prom
   await writeFile(path, data, { baseDir: BaseDirectory.AppData });
   
   const fullPath = `${await appDataDir()}/${path}`;
+  return fullPath;
+}
+
+/** Copia un archivo desde una ruta absoluta a la carpeta local de la aplicación */
+export async function copyMediaLocally(sourcePath: string, fileName: string): Promise<string> {
+  if (!isTauri()) return '';
+  await initMediaDir();
+  
+  const path = `${MEDIA_DIR}/${Date.now()}_${fileName}`;
+  const appDir = await appDataDir();
+  const fullPath = `${appDir}/${path}`;
+  
+  if (sourcePath.startsWith('content://')) {
+    // En Android, usamos un comando de Rust personalizado para leer URIs de contenido
+    await invoke('copy_android_content_to_local', { sourceUri: sourcePath, destPath: fullPath });
+  } else {
+    // En Desktop o rutas normales
+    await copyFile(sourcePath, fullPath);
+  }
+  
   return fullPath;
 }
 

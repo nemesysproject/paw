@@ -3,7 +3,7 @@
  * En desarrollo, las rutas relativas pasan por el proxy de Vite.
  * En producción/Tauri, se puede apuntar a la URL real del backend.
  */
-export const API_BASE_URL = '/api/v1';
+export const API_BASE_URL = 'http://192.168.1.12/api/v1';
 
 /** Claves de localStorage para tokens JWT */
 export const STORAGE_KEYS = {

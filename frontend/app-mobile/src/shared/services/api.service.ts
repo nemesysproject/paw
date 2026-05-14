@@ -1,4 +1,5 @@
 import { API_BASE_URL, STORAGE_KEYS, ROUTES } from './api.config';
+import { notifyApiResponse } from './notification.service';
 import type { TokenResponse } from '../models';
 
 /**
@@ -75,6 +76,9 @@ export async function fetchWithAuth(
   }
 
   const response = await fetch(url, { ...options, headers });
+  
+  // Notificar el código de respuesta genérico
+  notifyApiResponse(response.status);
 
   // Si recibimos 401, intentar refresh una sola vez
   if (response.status === 401 && !isRefreshing) {
@@ -86,7 +90,9 @@ export async function fetchWithAuth(
       if (!retryHeaders.has('Content-Type') && !(options.body instanceof FormData)) {
         retryHeaders.set('Content-Type', 'application/json');
       }
-      return fetch(url, { ...options, headers: retryHeaders });
+      const retryResponse = await fetch(url, { ...options, headers: retryHeaders });
+      notifyApiResponse(retryResponse.status);
+      return retryResponse;
     } else {
       // Refresh falló → forzar logout
       logout();
@@ -110,7 +116,9 @@ export async function fetchPublic(
     headers.set('Content-Type', 'application/json');
   }
 
-  return fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+  notifyApiResponse(response.status);
+  return response;
 }
 
 // ──────────────────────────────────────────────

@@ -36,6 +36,7 @@ export async function enqueueSyncAction(action: SyncAction['action'], payload: a
 
   // Intentar procesar inmediatamente si hay red
   if (isOnline()) {
+    console.log('Nueva acción en cola, procesando...');
     processSyncQueue();
   }
 }
@@ -52,6 +53,8 @@ export async function processSyncQueue() {
     "SELECT * FROM sync_queue WHERE status != 'syncing' AND retry_count < 5 ORDER BY created_at ASC"
   );
 
+
+  
   if (pending.length === 0) return;
 
   console.log(`📦 Procesando ${pending.length} acciones en la cola...`);

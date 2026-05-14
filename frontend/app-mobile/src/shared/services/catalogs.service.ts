@@ -26,13 +26,6 @@ export async function syncAllCatalogs(): Promise<void> {
 
     // Intentar obtener especies con reintento
     let speciesRes = await fetch(`${API_BASE_URL}/catalogs/species`);
-    
-    if (!speciesRes.ok) {
-      // Intento con URL absoluta por si el proxy falla en Tauri
-      const fallbackUrl = `http://localhost${API_BASE_URL}/catalogs/species`;
-      console.log(`⚠️ Falló ruta relativa, intentando fallback: ${fallbackUrl}`);
-      speciesRes = await fetch(fallbackUrl);
-    }
 
     if (!speciesRes.ok) {
       console.error(`❌ Error persistente en API Especies: ${speciesRes.status}`);
@@ -51,11 +44,6 @@ export async function syncAllCatalogs(): Promise<void> {
       // Cargar razas para esta especie
       const breedsUrl = `${API_BASE_URL}/catalogs/breeds?species_id=${s.id}`;
       let breedsRes = await fetch(breedsUrl);
-      
-      if (!breedsRes.ok) {
-         const fallbackBreedsUrl = `http://localhost${breedsUrl}`;
-         breedsRes = await fetch(fallbackBreedsUrl);
-      }
 
       if (breedsRes.ok) {
         const breeds: any[] = await breedsRes.json();

@@ -1,4 +1,4 @@
-import { saveMediaLocally } from './media-storage.service';
+import { copyMediaLocally } from './media-storage.service';
 import { getDb } from './database.service';
 import { enqueueSyncAction } from './sync.service';
 import { PetCreateRequest } from '../models';
@@ -9,7 +9,8 @@ import { PetCreateRequest } from '../models';
  */
 
 export interface MediaFile {
-  file: File;
+  path: string;
+  name: string;
   type: 'image' | 'video';
   localPath?: string;
 }
@@ -26,18 +27,20 @@ export async function createPetOffline(data: PetCreateData): Promise<string> {
   const db = await getDb();
   if (!db) throw new Error('Base de datos no disponible');
 
+  console.log('*** Iniciando proceso de guardado de mascota localmente ***');
   // 1. Guardar archivos multimedia localmente
   const mediaRecords: { local_path: string, type: string }[] = [];
-  
+
   for (const media of data.media) {
-    const arrayBuffer = await media.file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    
-    const localPath = await saveMediaLocally(media.file.name, uint8Array);
+    // Usamos copyMediaLocally con la ruta absoluta del archivo seleccionado
+    const localPath = await copyMediaLocally(media.path, media.name);
+    console.log('mediaRecords Ruta local del archivo:', localPath);
     mediaRecords.push({ local_path: localPath, type: media.type });
   }
 
   // 2. Guardar en tabla local pets_local
+
+  console.log('Guardando mascota localmente con ID:', local_id);
   await db.execute(
     `INSERT INTO pets_local (
       local_id, name, gender, status, description, 
@@ -49,6 +52,7 @@ export async function createPetOffline(data: PetCreateData): Promise<string> {
     ]
   );
 
+  console.log('Mascota guardada localmente con media:', mediaRecords);
   // 3. Guardar en tabla local media_local
   for (const m of mediaRecords) {
     await db.execute(
@@ -56,7 +60,7 @@ export async function createPetOffline(data: PetCreateData): Promise<string> {
       [crypto.randomUUID(), local_id, m.local_path, m.type]
     );
   }
-
+  console.log('Archivos multimedia guardados localmente:', mediaRecords);
   // 4. Encolar acción de sincronización
   // Incluimos las rutas locales para que el Sync Engine sepa qué borrar después
   const syncPayload = {
@@ -64,11 +68,14 @@ export async function createPetOffline(data: PetCreateData): Promise<string> {
     local_id,
     localMediaPaths: mediaRecords.map(m => m.local_path)
   };
-  
-  // Nota: Quitamos los objetos File del payload de sync porque no se pueden serializar a JSON
-  delete (syncPayload as any).media; 
+
+  // Quitamos la propiedad media del payload para no inflar la DB innecesariamente
+  delete (syncPayload as any).media;
+
+  console.log('🚀 ~ syncPayload:', syncPayload);
 
   await enqueueSyncAction('CREATE_PET', syncPayload);
+
 
   return local_id;
 }

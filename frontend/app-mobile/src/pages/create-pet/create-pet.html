@@ -16,7 +16,7 @@
 <body>
   <header class="app-bar">
     <div class="nav-actions">
-      <a href="/index.html" class="btn-icon-nav">
+      <a href="#" onclick="history.back(); return false;" class="btn-icon-nav">
         <i class="ph ph-arrow-left"></i>
       </a>
       <h2>Registrar Mascota</h2>
@@ -30,12 +30,11 @@
       <div class="media-upload-container">
         <div id="media-preview-grid" class="media-grid">
           <!-- Las miniaturas aparecerán aquí -->
-          <label for="media-input" class="media-add-card">
+          <button type="button" id="btn-add-media" class="media-add-card">
             <i class="ph ph-camera-plus"></i>
             <span>Añadir</span>
-          </label>
+          </button>
         </div>
-        <input type="file" id="media-input" multiple accept="image/*,video/*" class="hidden" />
         <p class="form-help">Mínimo 1 foto, máximo 10 archivos (Video máx 10MB)</p>
       </div>
 

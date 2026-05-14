@@ -1,5 +1,6 @@
 import { fetchWithAuth } from './api.service';
 import type { PetDetailResponse } from '../models';
+import { readFile } from '@tauri-apps/plugin-fs';
 
 /**
  * Servicio de mascotas.
@@ -59,10 +60,44 @@ export async function searchPets(
 
 /** Crea una nueva mascota en el servidor. */
 export async function createPet(petData: any): Promise<PetDetailResponse> {
+  const formData = new FormData();
+
+  // 1. Adjuntar campos de texto/metadatos
+  Object.keys(petData).forEach(key => {
+    // No adjuntamos la lista de rutas locales como campo de texto
+    if (key !== 'localMediaPaths' && petData[key] !== null && petData[key] !== undefined) {
+      formData.append(key, petData[key].toString());
+    }
+  });
+
+  // 2. Leer archivos del disco y adjuntarlos como Blobs
+  if (petData.localMediaPaths && Array.isArray(petData.localMediaPaths)) {
+    for (const filePath of petData.localMediaPaths) {
+      try {
+        const content = await readFile(filePath);
+        const fileName = filePath.split(/[/\\]/).pop() || 'upload.bin';
+
+        // Detectar tipo MIME básico según la extensión
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        let type = 'application/octet-stream';
+        if (ext === 'jpg' || ext === 'jpeg') type = 'image/jpeg';
+        else if (ext === 'png') type = 'image/png';
+        else if (ext === 'mp4') type = 'video/mp4';
+
+        // Creamos un Blob con el tipo detectado para mejor compatibilidad con el backend
+        const blob = new Blob([content], { type });
+        formData.append('media', blob, fileName);
+      } catch (err) {
+        console.error(`No se pudo leer el archivo para subir: ${filePath}`, err);
+      }
+    }
+  }
+
   const response = await fetchWithAuth('/pets', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(petData)
+    body: formData
+    // Nota: No establecemos 'Content-Type'. fetch establecerá automáticamente
+    // 'multipart/form-data' con el boundary correcto al detectar un cuerpo FormData.
   });
 
   if (!response.ok) {
