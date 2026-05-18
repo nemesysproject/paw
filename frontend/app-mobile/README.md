@@ -48,3 +48,8 @@ npm run tauri dev
 
 ### Configuración del API
 La URL base del backend se configura en `src/shared/services/api.config.ts`. Por defecto apunta al proxy de Vite `/api/v1`.
+
+
+### Comandos útiles:
+
+npm run tauri android build --release --target universal
