@@ -21,6 +21,10 @@
     "fs:allow-write",
     "fs:allow-stat",
     "fs:allow-copy-file",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
     {
       "identifier": "fs:scope",
       "allow": [
@@ -29,6 +33,12 @@
         },
         {
           "path": "$APPCACHE/**"
+        },
+        {
+          "path": "$APPDATA"
+        },
+        {
+          "path": "$APPDATA/**"
         },
         {
           "path": "/data/user/0/com.zutm.app_mobile/media_cache"

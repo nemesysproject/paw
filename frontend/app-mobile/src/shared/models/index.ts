@@ -54,7 +54,7 @@ export interface PetCreateRequest {
 export interface PetMediaResponse {
   id: string;
   pet_id: string;
-  media_url: string;
+  url: string;
   media_type: MediaType;
   created_at: string;
 }

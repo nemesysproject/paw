@@ -2,6 +2,7 @@ import { getDb } from './database.service';
 import { isOnline, onConnectionChange } from './connectivity.service';
 import { createPet } from './pets.service';
 import { deleteLocalMedia } from './media-storage.service';
+import { showToast } from '../ui/ui.utils';
 
 /**
  * Motor de Sincronización.
@@ -41,6 +42,32 @@ export async function enqueueSyncAction(action: SyncAction['action'], payload: a
   }
 }
 
+/** Limpia tareas corruptas del pasado que atascan la cola */
+export async function clearCorruptedPastActions() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(
+      "DELETE FROM sync_queue WHERE payload LIKE '%com.zutm.app_mobilemedia_cache%'"
+    );
+    console.log('🧹 Limpieza de cola de sincronización completada con éxito.');
+  } catch (err) {
+    console.error('❌ Error limpiando cola de sincronización:', err);
+  }
+}
+
+/** Resetea tareas que quedaron colgadas en 'syncing' por un reinicio o recarga */
+export async function resetStuckSyncActions() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute("UPDATE sync_queue SET status = 'pending' WHERE status = 'syncing'");
+    console.log('🔄 Tareas colgadas reseteadas a "pending" con éxito.');
+  } catch (err) {
+    console.error('❌ Error reseteando tareas colgadas:', err);
+  }
+}
+
 /** Procesa todos los elementos pendientes en la cola */
 export async function processSyncQueue() {
   if (!isOnline()) return;
@@ -48,24 +75,26 @@ export async function processSyncQueue() {
   const db = await getDb();
   if (!db) return;
 
-  // Obtener elementos pendientes
+  // 1. Resetea tareas colgadas por recarga de la página o reinicio
+  await resetStuckSyncActions();
+
+  // 2. Limpiar automáticamente tareas corruptas del pasado antes de procesar
+  await clearCorruptedPastActions();
+
+  // 3. Obtener elementos pendientes
   const pending = await db.select<any[]>(
     "SELECT * FROM sync_queue WHERE status != 'syncing' AND retry_count < 5 ORDER BY created_at ASC"
   );
 
+  console.log('📋 Cola de sincronización cruda:', pending);
 
-  
   if (pending.length === 0) return;
 
   console.log(`📦 Procesando ${pending.length} acciones en la cola...`);
 
-  // Intentar auto-login biométrico si la sesión expiró (importante para sync de fondo)
-  // Nota: Esto podría fallar si requiere interacción, pero en Tauri el authenticate 
-  // puede configurarse para persistir o simplemente fallará y el usuario lo hará manual.
-  // Por ahora asumimos que la sesión puede estar activa o el usuario será notificado.
-
   for (const item of pending) {
     try {
+      console.log(`🔄 Sincronizando acción ${item.id} (${item.action}). Intento #${item.retry_count + 1}`);
       await updateActionStatus(item.id, 'syncing');
       
       const payload = JSON.parse(item.payload);
@@ -74,16 +103,17 @@ export async function processSyncQueue() {
         case 'CREATE_PET':
           await handleCreatePetSync(payload);
           break;
-        // Otros casos como UPDATE_PET o UPLOAD_MEDIA se añadirán aquí
       }
 
       // Si tiene éxito, eliminar de la cola
       await db.execute('DELETE FROM sync_queue WHERE id = ?', [item.id]);
       console.log(`✅ Acción ${item.id} (${item.action}) sincronizada con éxito`);
+      showToast('Sincronización exitosa', 'success');
 
     } catch (error: any) {
       console.error(`❌ Error sincronizando acción ${item.id}:`, error);
-      await updateActionStatus(item.id, 'failed', error.message);
+      await updateActionStatus(item.id, 'failed', error.message || String(error));
+      showToast(`Fallo de sincronización: ${error.message || error}`, 'error');
     }
   }
 }

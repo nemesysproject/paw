@@ -3,8 +3,9 @@ import { showToast, setButtonLoading } from '../../shared/ui/ui.utils';
 import { getSpecies, getBreeds } from '../../shared/services/catalogs.service';
 import { PetGender, PetStatus } from '../../shared/models';
 import { open } from '@tauri-apps/plugin-dialog';
-import { invoke, convertFileSrc } from '@tauri-apps/api/core';
-import { stat } from '@tauri-apps/plugin-fs';
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { stat, readFile } from '@tauri-apps/plugin-fs';
+import { copyMediaLocally } from '../../shared/services/media-storage.service';
 
 /**
  * Lógica de la página de creación de mascotas.
@@ -15,7 +16,6 @@ let userLocation: { lat: number; lon: number } | null = null;
 
 const MAX_FILES = 10;
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB
-const SUBMIT_TIMEOUT_MS = 15000; // 15 segundos
 
 document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('create-pet-form') as HTMLFormElement;
@@ -87,45 +87,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
   }
 
-  // 3. Manejar selección de archivos nativa
+  // 3. Manejar selección de archivos (galería)
   if (btnAddMedia) {
     btnAddMedia.addEventListener('click', async (e) => {
       e.preventDefault();
-
-      // En Android, usamos nuestras rutinas nativas para captura directa
-      // Para galería seguimos usando el dialog
-      const useCamera = confirm("¿Usar cámara para capturar? (Aceptar: Cámara, Cancelar: Galería)");
-
-      if (useCamera) {
-        try {
-          const isVideo = confirm("¿Deseas grabar un video? (Aceptar: Video, Cancelar: Foto)");
-          const command = isVideo ? 'plugin:media|takeVideo' : 'plugin:media|takePhoto';
-          
-          const result = await invoke<{path: string, type: string}>(command);
-          
-          if (selectedMedia.length >= MAX_FILES) {
-            showToast(`Máximo ${MAX_FILES} archivos permitidos`, 'error');
-            return;
-          }
-
-          const fileName = result.path.split(/[/\\]/).pop() || 'captura';
-          
-          selectedMedia.push({
-            path: result.path,
-            name: fileName,
-            type: result.type as 'image' | 'video'
-          });
-
-          renderPreview();
-          validateForm();
-        } catch (err) {
-          console.error('Error en captura nativa:', err);
-          if (err !== 'Capture cancelled or failed') {
-            showToast('Error al usar la cámara', 'error');
-          }
-        }
-        return;
-      }
 
       try {
         const selected = await open({
@@ -146,36 +111,77 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
-        for (const filePath of paths) {
-          // Obtener nombre del archivo de la ruta
-          const fileName = filePath.split(/[/\\]/).pop() || 'archivo';
-          const isVideo = fileName.toLowerCase().endsWith('.mp4');
+        // Mostrar el banner de carga de inmediato
+        const loadingOverlay = document.getElementById('loading-overlay');
+        loadingOverlay?.classList.remove('hidden');
 
-          // En Android, el selector devuelve URIs (content://). 
-          // Las funciones de @tauri-apps/plugin-fs solo aceptan rutas absolutas sin protocolo.
-          const isUri = filePath.includes('://');
+        // Retardar el procesamiento para permitir que la interfaz dibuje el overlay
+        setTimeout(async () => {
+          try {
+            for (const filePath of paths) {
+              const fileName = filePath.split(/[/\\]/).pop() || 'archivo';
+              const isVideo = fileName.toLowerCase().endsWith('.mp4');
 
-          if (isVideo && !isUri) {
-            try {
-              const fileStat = await stat(filePath);
-              if (fileStat.size > MAX_VIDEO_SIZE) {
-                showToast(`El video ${fileName} excede los 10MB`, 'error');
-                continue;
+              // Validar tamaño de video si es una ruta local (no content://)
+              const isUri = filePath.includes('://');
+              if (isVideo && !isUri) {
+                try {
+                  const fileStat = await stat(filePath);
+                  if (fileStat.size > MAX_VIDEO_SIZE) {
+                    showToast(`El video ${fileName} excede los 10MB`, 'error');
+                    continue;
+                  }
+                } catch (err) {
+                  console.warn('No se pudo verificar tamaño del video', err);
+                }
               }
-            } catch (err) {
-              console.warn('No se pudo verificar tamaño del video', err);
+
+              try {
+                // Copiar el archivo localmente de inmediato para asegurar persistencia y evitar expiración de URIs
+                const localPath = await copyMediaLocally(filePath, fileName);
+                // console.log(`📸 Archivo copiado para vista previa a: ${localPath}`);
+
+                // Generar vista previa Base64 para imágenes de forma instantánea y robusta
+                let base64Preview = '';
+                if (!isVideo) {
+                  try {
+                    const content = await readFile(localPath);
+                    let binary = '';
+                    const bytes = new Uint8Array(content);
+                    const len = bytes.byteLength;
+                    for (let i = 0; i < len; i++) {
+                      binary += String.fromCharCode(bytes[i]);
+                    }
+                    const base64 = window.btoa(binary);
+                    const ext = fileName.split('.').pop()?.toLowerCase();
+                    const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+                    base64Preview = `data:${mimeType};base64,${base64}`;
+                  } catch (readErr) {
+                    console.warn('No se pudo generar vista previa Base64:', readErr);
+                  }
+                }
+
+                selectedMedia.push({
+                  path: localPath,
+                  name: fileName,
+                  type: isVideo ? 'video' : 'image',
+                  localPath: base64Preview || undefined // Almacena Base64 Data URL
+                });
+              } catch (copyErr) {
+                console.error('Error al copiar el archivo para vista previa:', copyErr);
+                showToast(`Error al procesar el archivo ${fileName}`, 'error');
+              }
             }
+
+            renderPreview();
+            validateForm();
+          } catch (err) {
+            console.error('Error procesando archivos seleccionados:', err);
+          } finally {
+            // Ocultar el overlay de carga al finalizar
+            loadingOverlay?.classList.add('hidden');
           }
-
-          selectedMedia.push({
-            path: filePath,
-            name: fileName,
-            type: isVideo ? 'video' : 'image'
-          });
-        }
-
-        renderPreview();
-        validateForm();
+        }, 50);
       } catch (err) {
         console.error('Error abriendo selector de archivos:', err);
       }
@@ -205,11 +211,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (media.type === 'image') {
         const img = document.createElement('img');
-        img.src = convertFileSrc(media.path);
+        img.src = media.localPath || convertFileSrc(media.path);
         card.appendChild(img);
       } else {
         const video = document.createElement('video');
-        video.src = convertFileSrc(media.path);
+        video.src = media.localPath || convertFileSrc(media.path);
         card.appendChild(video);
       }
 
@@ -243,30 +249,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       const formData = new FormData(form);
       const restoreBtn = setButtonLoading(btnSubmit as HTMLButtonElement);
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Tiempo de espera agotado')), SUBMIT_TIMEOUT_MS)
-      );
-
       try {
+        console.log('📝 Iniciando registro de mascota...');
 
+        const localId = await createPetOffline({
+          name: formData.get('name') as string,
+          gender: formData.get('gender') as PetGender,
+          status: formData.get('status') as PetStatus,
+          description: formData.get('description') as string,
+          species_id: formData.get('species_id') as string,
+          breed_id: formData.get('breed_id') as string || null,
+          last_latitude: userLocation.lat,
+          last_longitude: userLocation.lon,
+          media: selectedMedia
+        });
 
-
-        await Promise.race([
-          createPetOffline({
-            name: formData.get('name') as string,
-            gender: formData.get('gender') as PetGender,
-            status: formData.get('status') as PetStatus,
-            description: formData.get('description') as string,
-            species_id: formData.get('species_id') as string,
-            breed_id: formData.get('breed_id') as string || null,
-            last_latitude: userLocation.lat,
-            last_longitude: userLocation.lon,
-            media: selectedMedia
-          }),
-          timeoutPromise
-        ]);
-
-        showToast('¡Mascota registrada localmente! Se sincronizará al tener red.', 'success');
+        console.log('✅ Mascota registrada con ID local:', localId);
+        showToast('¡Mascota registrada! Se sincronizará al tener red.', 'success');
 
         setTimeout(() => {
           window.location.href = '/index.html';
@@ -274,9 +273,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       } catch (error: any) {
         console.error('Error creando mascota offline:', error);
-        showToast(error || 'Error al guardar offline', 'error');
+        showToast(error?.message || error || 'Error al guardar', 'error');
         restoreBtn();
       }
     });
   }
+
+  // Ejecutar validación inicial al cargar la página
+  validateForm();
 });

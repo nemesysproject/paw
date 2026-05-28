@@ -135,10 +135,10 @@ export class DashboardComponent implements OnInit {
   }
 
   async initMap(data: DashboardResponse) {
-    setOptions({
-      key: environment.googleMapKey,
-      v: 'weekly',
-    });
+    // setOptions({
+    //   key: environment.googleMapKey,
+    //   v: 'weekly',
+    // });
 
     const { Map, InfoWindow } = await importLibrary('maps');
     const { Marker } = await importLibrary('marker');

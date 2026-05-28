@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
      // Verifica si la variable DATABASE_URL existe en el entorno (venga de .env o de Docker)
     match std::env::var("DATABASE_URL") {
-        Ok(val) => println!("✅ DATABASE_URL detectada."),
+        Ok(_) => println!("✅ DATABASE_URL detectada."),
         Err(_) => {
             println!("❌ ERROR: DATABASE_URL no está definida en el entorno.");
             // Imprime todas las variables disponibles para ver qué recibió Rust
@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     for var in vars.iter() {
         match env::var(var) {
-            Ok(val) => println!("{}: Configurada correctamente", var),
+            Ok(_) => println!("{}: Configurada correctamente", var),
             Err(_) => println!("{}: NO ENCONTRADA", var),
         }
     }

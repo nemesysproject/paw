@@ -1,4 +1,4 @@
-import { fetchWithAuth } from './api.service';
+import { fetchWithAuth, getAccessToken } from './api.service';
 import type { PetDetailResponse } from '../models';
 import { readFile } from '@tauri-apps/plugin-fs';
 
@@ -6,6 +6,25 @@ import { readFile } from '@tauri-apps/plugin-fs';
  * Servicio de mascotas.
  * Encapsula las llamadas a /pets/* del backend.
  */
+
+function getUserIdFromToken(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload).sub;
+  } catch (err) {
+    console.error('Error decoding JWT token:', err);
+    return null;
+  }
+}
 
 /** Lista todas las mascotas registradas. */
 export async function listPets(): Promise<PetDetailResponse[]> {
@@ -70,11 +89,27 @@ export async function createPet(petData: any): Promise<PetDetailResponse> {
     }
   });
 
+  // Adjuntar dinámicamente el ID del reportero desde el token JWT
+  const reporterId = getUserIdFromToken();
+  if (reporterId && !formData.has('reporter_id')) {
+    formData.append('reporter_id', reporterId);
+  } else if (!formData.has('reporter_id')) {
+    throw new Error('No se pudo determinar el reporter_id (usuario no autenticado)');
+  }
+
   // 2. Leer archivos del disco y adjuntarlos como Blobs
   if (petData.localMediaPaths && Array.isArray(petData.localMediaPaths)) {
+    console.log(`📂 Cantidad de archivos a procesar: ${petData.localMediaPaths.length}`);
     for (const filePath of petData.localMediaPaths) {
       try {
+        console.log(`📄 Leyendo archivo desde la ruta: "${filePath}"`);
         const content = await readFile(filePath);
+        console.log(`💾 Archivo leído con éxito. Tamaño: ${content.length} bytes.`);
+        
+        if (content.length === 0) {
+          throw new Error('El archivo está vacío (0 bytes)');
+        }
+
         const fileName = filePath.split(/[/\\]/).pop() || 'upload.bin';
 
         // Detectar tipo MIME básico según la extensión
@@ -84,11 +119,14 @@ export async function createPet(petData: any): Promise<PetDetailResponse> {
         else if (ext === 'png') type = 'image/png';
         else if (ext === 'mp4') type = 'video/mp4';
 
+        console.log(`🏷️ Archivo detectado como: ${type} (${fileName})`);
+
         // Creamos un Blob con el tipo detectado para mejor compatibilidad con el backend
         const blob = new Blob([content], { type });
-        formData.append('media', blob, fileName);
-      } catch (err) {
-        console.error(`No se pudo leer el archivo para subir: ${filePath}`, err);
+        formData.append('file', blob, fileName);
+      } catch (err: any) {
+        console.error(`❌ Error al leer archivo "${filePath}":`, err);
+        throw new Error(`Error leyendo archivo multimedia local (${filePath}): ${err.message || err}`);
       }
     }
   }

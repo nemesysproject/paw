@@ -5,8 +5,13 @@ import org.gradle.api.GradleException
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
-open class BuildTask : DefaultTask() {
+abstract class BuildTask : DefaultTask() {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
     @Input
     var rootDirRel: String? = null
     @Input
@@ -50,7 +55,7 @@ open class BuildTask : DefaultTask() {
         val release = release ?: throw GradleException("release cannot be null")
         val args = listOf("run", "--", "tauri", "android", "android-studio-script");
 
-        project.exec {
+        execOperations.exec {
             workingDir(File(project.projectDir, rootDirRel))
             executable(executable)
             args(args)
@@ -65,4 +70,4 @@ open class BuildTask : DefaultTask() {
             args(listOf("--target", target))
         }.assertNormalExitValue()
     }
-}
+}

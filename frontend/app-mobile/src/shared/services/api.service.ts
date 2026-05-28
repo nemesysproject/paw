@@ -57,6 +57,16 @@ export function requireAuth(): void {
 /** Flag para evitar loops infinitos de refresh */
 let isRefreshing = false;
 
+/** Helper para verificar si un cuerpo de petición es FormData de forma robusta en cualquier entorno/compilación. */
+function isFormData(body: any): boolean {
+  return !!(
+    body &&
+    (body instanceof FormData ||
+      Object.prototype.toString.call(body) === '[object FormData]' ||
+      typeof body.append === 'function')
+  );
+}
+
 /**
  * Fetch wrapper que inyecta el JWT y reintenta con refresh si recibe 401.
  */
@@ -71,7 +81,7 @@ export async function fetchWithAuth(
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+  if (!headers.has('Content-Type') && !isFormData(options.body)) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -87,7 +97,7 @@ export async function fetchWithAuth(
       // Re-intentar la petición original con el nuevo token
       const retryHeaders = new Headers(options.headers || {});
       retryHeaders.set('Authorization', `Bearer ${getAccessToken()}`);
-      if (!retryHeaders.has('Content-Type') && !(options.body instanceof FormData)) {
+      if (!retryHeaders.has('Content-Type') && !isFormData(options.body)) {
         retryHeaders.set('Content-Type', 'application/json');
       }
       const retryResponse = await fetch(url, { ...options, headers: retryHeaders });

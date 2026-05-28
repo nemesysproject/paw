@@ -10,7 +10,7 @@ const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1548199973-03cce0bbc8
 function createPetCard(pet: PetDetailResponse): string {
   const statusClass = pet.status.toLowerCase();
   const petName = pet.name || 'Sin nombre';
-  const imageUrl = pet.media && pet.media.length > 0 ? pet.media[0].media_url : PLACEHOLDER_IMG;
+  const imageUrl = pet.media && pet.media.length > 0 ? pet.media[0].url : PLACEHOLDER_IMG;
   const imageCount = pet.media.length || 1;
   const description = pet.description || 'Sin descripción disponible.';
 

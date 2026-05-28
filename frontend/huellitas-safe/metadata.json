@@ -1,0 +1,6 @@
+{
+  "name": "Huellitas Safe",
+  "description": "Aplicación para el registro de mascotas en situación de calle con soporte online/offline, fotos, videos, localización y autenticación biométrica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,11 +1,13 @@
-import { BaseDirectory, writeFile, remove, exists, mkdir, copyFile } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, writeFile, readFile, remove, exists, mkdir } from '@tauri-apps/plugin-fs';
 import { appDataDir } from '@tauri-apps/api/path';
-import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from './platform.service';
 
 /**
  * Servicio para gestionar archivos multimedia (fotos/videos) localmente.
  * Almacena archivos en el directorio de datos de la aplicación.
+ * 
+ * Soporta content:// URIs de Android usando readFile de Tauri plugin-fs
+ * que maneja ContentResolver internamente.
  */
 
 const MEDIA_DIR = 'media_cache';
@@ -18,35 +20,37 @@ export async function initMediaDir() {
   }
 }
 
-/** Guarda un archivo binario localmente y retorna la ruta */
-export async function saveMediaLocally(fileName: string, data: Uint8Array): Promise<string> {
-  if (!isTauri()) return '';
-  await initMediaDir();
-  
-  const path = `${MEDIA_DIR}/${Date.now()}_${fileName}`;
-  await writeFile(path, data, { baseDir: BaseDirectory.AppData });
-  
-  const fullPath = `${await appDataDir()}/${path}`;
-  return fullPath;
-}
-
-/** Copia un archivo desde una ruta absoluta a la carpeta local de la aplicación */
+/**
+ * Copia un archivo desde cualquier ruta (incluyendo content:// URIs) 
+ * a la carpeta local de la aplicación.
+ * 
+ * Usa readFile/writeFile de Tauri plugin-fs que soporta content:// en Android.
+ */
 export async function copyMediaLocally(sourcePath: string, fileName: string): Promise<string> {
   if (!isTauri()) return '';
+  
+  // If the file is already inside our local app cache, bypass copying
+  if (sourcePath.includes(MEDIA_DIR) && !sourcePath.startsWith('content://')) {
+    console.log(`ℹ️ El archivo ya es local en la caché: ${sourcePath}`);
+    return sourcePath;
+  }
+
   await initMediaDir();
   
-  const path = `${MEDIA_DIR}/${Date.now()}_${fileName}`;
+  const destName = `${Date.now()}_${fileName}`;
+  const relativePath = `${MEDIA_DIR}/${destName}`;
+  
+  console.log(`📂 Copiando archivo: ${fileName}...`);
+  
+  // readFile de Tauri plugin-fs soporta content:// URIs en Android
+  const content = await readFile(sourcePath);
+  await writeFile(relativePath, content, { baseDir: BaseDirectory.AppData });
+  
   const appDir = await appDataDir();
-  const fullPath = `${appDir}/${path}`;
+  const separator = (appDir.endsWith('/') || appDir.endsWith('\\')) ? '' : '/';
+  const fullPath = `${appDir}${separator}${relativePath}`;
   
-  if (sourcePath.startsWith('content://')) {
-    // En Android, usamos un comando de Rust personalizado para leer URIs de contenido
-    await invoke('copy_android_content_to_local', { sourceUri: sourcePath, destPath: fullPath });
-  } else {
-    // En Desktop o rutas normales
-    await copyFile(sourcePath, fullPath);
-  }
-  
+  console.log(`✅ Archivo copiado: ${fullPath}`);
   return fullPath;
 }
 
@@ -54,7 +58,6 @@ export async function copyMediaLocally(sourcePath: string, fileName: string): Pr
 export async function deleteLocalMedia(filePath: string): Promise<void> {
   if (!isTauri()) return;
   
-  // Extraer la ruta relativa al AppData si es necesario
   const appData = await appDataDir();
   const relativePath = filePath.replace(appData, '').replace(/^\/+/, '').replace(/^\\+/, '');
   
