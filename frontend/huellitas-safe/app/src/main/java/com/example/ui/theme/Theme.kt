@@ -1,55 +1,54 @@
 package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme =
-  darkColorScheme(
-    primary = DarkWarmPrimary,
-    secondary = DarkWarmSecondary,
-    tertiary = DarkWarmTertiary,
-    background = DarkWarmBackground,
-    surface = DarkWarmSurface,
-    onBackground = DarkWarmOnBackground,
-    onSurface = DarkWarmOnSurface
-  )
+// --- THEME COLOR SCHEMES ---
 
-private val LightColorScheme =
-  lightColorScheme(
-    primary = WarmPrimary,
-    secondary = WarmSecondary,
-    tertiary = WarmTertiary,
-    background = WarmBackground,
-    surface = WarmSurface,
-    onPrimary = WarmOnPrimary,
-    onBackground = WarmOnBackground,
-    onSurface = WarmOnSurface
-  )
+// 1. Premium Dark (Default)
+private val PremiumDarkColorScheme = darkColorScheme(
+    primary = PremiumGradientStart,
+    secondary = PremiumGradientEnd,
+    background = PremiumDarkBg,
+    surface = PremiumDarkSurface,
+    onPrimary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White
+)
+
+// 2. Glass (New - Frosted Glass Style)
+private val GlassColorScheme = darkColorScheme(
+    primary = Color.White,
+    secondary = Color(0xFFB0B0B0),
+    background = Color(0xFF121417), // Very dark base for glass contrast
+    surface = Color(0xFF2A2D35),
+    onPrimary = Color.Black,
+    onBackground = Color.White,
+    onSurface = Color.White
+)
+
+// 3. Midnight (Blue/Purple)
+private val MidnightColorScheme = darkColorScheme(
+    primary = Color(0xFF9E77ED),
+    secondary = Color(0xFF7694FF),
+    background = Color(0xFF0F101A),
+    surface = Color(0xFF1B1D2E),
+    onPrimary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White
+)
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Forzamos el uso de nuestra paleta cálida personalizada para garantizar la consistencia visual solicitada
-  dynamicColor: Boolean = false,
-  content: @Composable () -> Unit,
+    themeName: String = "Premium Dark",
+    content: @Composable () -> Unit,
 ) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
+    val colorScheme = when (themeName) {
+        "Glass" -> GlassColorScheme
+        "Midnight" -> MidnightColorScheme
+        else -> PremiumDarkColorScheme
     }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }

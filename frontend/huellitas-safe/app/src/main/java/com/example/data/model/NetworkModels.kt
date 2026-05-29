@@ -1,5 +1,7 @@
 package com.example.data.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -26,28 +28,32 @@ data class TokenResponse(
     val refreshTokenCamel: String? = null
 )
 
+@Entity(tableName = "species")
 @JsonClass(generateAdapter = true)
 data class SpeciesDto(
-    val id: String,
+    @PrimaryKey val id: String,
     val name: String
 )
 
+@Entity(tableName = "breeds")
 @JsonClass(generateAdapter = true)
 data class BreedDto(
-    val id: String,
+    @PrimaryKey val id: String,
     val name: String,
     @Json(name = "species_id") val speciesId: String
 )
 
+@Entity(tableName = "genders")
 @JsonClass(generateAdapter = true)
 data class GenderDto(
-    val id: String,
+    @PrimaryKey val id: String,
     val name: String
 )
 
+@Entity(tableName = "statuses")
 @JsonClass(generateAdapter = true)
 data class StatusDto(
-    val id: String,
+    @PrimaryKey val id: String,
     val name: String
 )
 

@@ -7,11 +7,15 @@ import java.io.Serializable
 @Entity(tableName = "pet_registrations")
 data class PetRegistration(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val remoteId: String? = null, // Backend UUID representing this pet
+    val remoteId: String? = null,
     val name: String,
     val description: String,
-    val photosJson: String, // Comma-separated string or JSON list of Local URIs (max 10)
-    val videoPath: String?, // Local video URI/path
+    val gender: String = "DESCONOCIDO",
+    val status: String = "DESCONOCIDO",
+    val speciesId: String? = null,
+    val breedId: String? = null,
+    val photosJson: String,
+    val videoPath: String?,
     val latitude: Double,
     val longitude: Double,
     val locationName: String,

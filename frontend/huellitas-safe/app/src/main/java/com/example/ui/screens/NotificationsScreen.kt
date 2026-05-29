@@ -39,13 +39,13 @@ fun NotificationsLayout(
     onDeleteNotification: (String) -> Unit,
     onToggleNearbyAlerts: () -> Unit,
     nearbyAlertsEnabled: Boolean,
-    onSimulateNotification: () -> Unit
+    onSimulateNotification: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Encabezado de la Sección de Notificaciones

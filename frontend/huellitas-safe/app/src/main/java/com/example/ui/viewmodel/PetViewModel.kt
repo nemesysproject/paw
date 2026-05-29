@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -24,6 +26,14 @@ class PetViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+
+    val currentTheme: StateFlow<String> = repository.selectedTheme
+        .map { it?.themeName ?: "Premium Dark" }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = "Premium Dark"
         )
 
     // --- NETWORK & ONLINE STATUS ---
@@ -56,17 +66,24 @@ class PetViewModel(
     val syncMessage: StateFlow<String> = _syncMessage.asStateFlow()
 
     // --- CATALOG STATES ---
-    private val _speciesCatalog = MutableStateFlow<List<SpeciesDto>>(emptyList())
-    val speciesCatalog: StateFlow<List<SpeciesDto>> = _speciesCatalog.asStateFlow()
+    val speciesCatalog: StateFlow<List<SpeciesDto>> = repository.speciesCatalog
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _gendersCatalog = MutableStateFlow<List<GenderDto>>(emptyList())
-    val gendersCatalog: StateFlow<List<GenderDto>> = _gendersCatalog.asStateFlow()
+    val gendersCatalog: StateFlow<List<GenderDto>> = repository.gendersCatalog
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _statusesCatalog = MutableStateFlow<List<StatusDto>>(emptyList())
-    val statusesCatalog: StateFlow<List<StatusDto>> = _statusesCatalog.asStateFlow()
+    val statusesCatalog: StateFlow<List<StatusDto>> = repository.statusesCatalog
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _breedsCatalog = MutableStateFlow<List<BreedDto>>(emptyList())
-    val breedsCatalog: StateFlow<List<BreedDto>> = _breedsCatalog.asStateFlow()
+    private val _selectedSpeciesId = MutableStateFlow<String?>(null)
+    
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val breedsCatalog: StateFlow<List<BreedDto>> = _selectedSpeciesId
+        .flatMapLatest { id ->
+            if (id.isNullOrBlank()) repository.allBreedsCatalog
+            else repository.getBreedsBySpecies(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // --- REMOTE PETS STATE ---
     private val _remotePets = MutableStateFlow<List<PetDetailResponse>>(emptyList())
@@ -89,6 +106,12 @@ class PetViewModel(
     // --- ACTIONS ---
     fun setAuthenticated(auth: Boolean) {
         _isAuthenticated.value = auth
+    }
+
+    fun setTheme(themeName: String) {
+        viewModelScope.launch {
+            repository.setTheme(themeName)
+        }
     }
 
     fun toggleNetwork(online: Boolean) {
@@ -212,44 +235,39 @@ class PetViewModel(
     }
 
     fun logout() {
-        sessionManager.clearSession()
+        sessionManager.clearTokens()
         _isLoggedIn.value = false
         _isAuthenticated.value = false
         _remotePets.value = emptyList()
+    }
+
+    fun clearStoredCredentials() {
+        sessionManager.clearSession()
+        _isLoggedIn.value = false
+        _isAuthenticated.value = false
+    }
+
+    fun biometricLogin() {
+        // En un caso real, aquí usaríamos un refresh token o contraseña guardada.
+        // Para este prototipo, si la biometría es exitosa y hay un usuario recordado, permitimos el acceso.
+        if (!currentUserEmail.isNullOrBlank()) {
+            _isLoggedIn.value = true
+            _isAuthenticated.value = true
+            loadCatalogs()
+            fetchRemotePets()
+        }
     }
 
     // --- CATALOG LOADER ---
     fun loadCatalogs() {
         if (!_isOnline.value) return
         viewModelScope.launch {
-            try {
-                val species = repository.fetchSpecies()
-                if (species.isNotEmpty()) _speciesCatalog.value = species
-
-                val genders = repository.fetchGenders()
-                if (genders.isNotEmpty()) _gendersCatalog.value = genders
-
-                val statuses = repository.fetchStatuses()
-                if (statuses.isNotEmpty()) _statusesCatalog.value = statuses
-
-                val breeds = repository.fetchAllBreeds()
-                if (breeds.isNotEmpty()) _breedsCatalog.value = breeds
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            repository.syncCatalogs()
         }
     }
 
     fun loadBreedsForSpecies(speciesId: String) {
-        if (!_isOnline.value) return
-        viewModelScope.launch {
-            try {
-                val breeds = repository.fetchBreedsBySpecies(speciesId)
-                _breedsCatalog.value = breeds
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        _selectedSpeciesId.value = speciesId
     }
 
     // --- REMOTE PETS LOADER ---
@@ -312,6 +330,10 @@ class PetViewModel(
             val pet = PetRegistration(
                 name = name.ifBlank { "Mascota sin Nombre" },
                 description = description.ifBlank { "Sin descripción detallada" },
+                gender = gender,
+                status = status,
+                speciesId = speciesId,
+                breedId = breedId,
                 photosJson = photoPathsString,
                 videoPath = _formVideoPath.value,
                 latitude = latitude,
@@ -369,6 +391,10 @@ class PetViewModel(
                 remoteId = remoteId,
                 name = name,
                 description = description,
+                gender = gender,
+                status = status,
+                speciesId = speciesId,
+                breedId = breedId,
                 photosJson = newPhotos.joinToString(","),
                 videoPath = null,
                 latitude = latitude,

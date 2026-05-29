@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.data.model.PetRegistration
+import com.example.data.model.*
 
-@Database(entities = [PetRegistration::class], version = 2, exportSchema = false)
+@Database(entities = [PetRegistration::class, AppTheme::class, SpeciesDto::class, BreedDto::class, GenderDto::class, StatusDto::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun petRegistrationDao(): PetRegistrationDao
+    abstract fun themeDao(): ThemeDao
+    abstract fun catalogDao(): CatalogDao
 
     companion object {
         @Volatile

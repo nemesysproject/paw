@@ -9,18 +9,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.model.PetRegistration
 
 @Composable
@@ -28,6 +32,9 @@ fun ProfileLayout(
     registrations: List<PetRegistration>,
     name: String,
     email: String,
+    profilePhotoUrl: String? = null,
+    currentTheme: String = "Premium Dark",
+    onThemeChanged: (String) -> Unit,
     onNameChanged: (String) -> Unit,
     onEmailChanged: (String) -> Unit,
     onPetClicked: (PetRegistration) -> Unit,
@@ -41,11 +48,38 @@ fun ProfileLayout(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Tarjeta de Identidad y Editar Información Personal
+        // --- SELECCIÓN DE TEMA ---
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
             shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color(0xFFF3E9E5)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Tema de la Aplicación", fontWeight = FontWeight.Bold, color = Color.White)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Glass", "Premium Dark", "Midnight").forEach { theme ->
+                        Button(
+                            onClick = { onThemeChanged(theme) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (currentTheme == theme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                contentColor = if (currentTheme == theme) Color.White else Color.Gray
+                            )
+                        ) {
+                            Text(theme, fontSize = 10.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Tarjeta de Identidad
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -57,39 +91,54 @@ fun ProfileLayout(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(100.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Iniciales con display tipográfico
-                    Text(
-                        text = name.split(" ").mapNotNull { it.firstOrNull() }.take(2).joinToString("").uppercase(),
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                    if (!profilePhotoUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = profilePhotoUrl,
+                            contentDescription = "Foto de Perfil",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        // Iniciales con display tipográfico si no hay foto
+                        Text(
+                            text = name.split(" ").mapNotNull { it.firstOrNull() }.take(2).joinToString("").uppercase(),
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                    )
+                    Text(
+                        text = email,
+                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
                     )
                 }
 
-                Text(
-                    text = "Editor De Datos Personales",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.1f))
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = onNameChanged,
-                    label = { Text("Nombre Completo") },
+                    label = { Text("Nombre Completo", color = Color.Gray) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color(0xFFE0E0E0),
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -97,14 +146,14 @@ fun ProfileLayout(
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChanged,
-                    label = { Text("Dirección De Email") },
+                    label = { Text("Dirección De Email", color = Color.Gray) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color(0xFFE0E0E0),
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -112,22 +161,22 @@ fun ProfileLayout(
                 Button(
                     onClick = onSaveProfile,
                     shape = RoundedCornerShape(100.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                    modifier = Modifier.fillMaxWidth().height(44.dp).background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)), RoundedCornerShape(100.dp)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                 ) {
-                    Icon(Icons.Default.Check, "Guardar", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Check, "Guardar", modifier = Modifier.size(16.dp), tint = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Guardar Datos De Perfil", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Guardar Datos De Perfil", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                 }
 
                 OutlinedButton(
                     onClick = onLogout,
                     shape = RoundedCornerShape(100.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                    border = BorderStroke(1.dp, Color.Red),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEC6A7C)),
+                    border = BorderStroke(1.dp, Color(0xFFEC6A7C).copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth().height(44.dp)
                 ) {
-                    Icon(Icons.Default.ExitToApp, "Cerrar Sesión", tint = Color.Red, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar Sesión", tint = Color(0xFFEC6A7C), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Cerrar Sesión", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
@@ -136,8 +185,8 @@ fun ProfileLayout(
 
         // Métricas de Rescates Realizados por el Usuario
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7F5)),
-            border = BorderStroke(1.dp, Color(0xFFFADCD3)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -153,16 +202,16 @@ fun ProfileLayout(
                         text = registrations.size.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color.White
                     )
-                    Text("Total Rescates", fontSize = 10.sp, color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
+                    Text("Total Rescates", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                 }
 
                 Box(
                     modifier = Modifier
                         .height(30.dp)
                         .width(1.dp)
-                        .background(Color(0xFFF3E9E5))
+                        .background(Color.White.copy(alpha = 0.1f))
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -171,16 +220,16 @@ fun ProfileLayout(
                         text = syncedCount.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF5F9E81)
+                        color = Color(0xFF81C784)
                     )
-                    Text("Sincronizados", fontSize = 10.sp, color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
+                    Text("Sincronizados", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                 }
 
                 Box(
                     modifier = Modifier
                         .height(30.dp)
                         .width(1.dp)
-                        .background(Color(0xFFF3E9E5))
+                        .background(Color.White.copy(alpha = 0.1f))
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -189,20 +238,20 @@ fun ProfileLayout(
                         text = pendingCount.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = Color(0xFFEC6A7C)
                     )
-                    Text("Pendientes", fontSize = 10.sp, color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
+                    Text("Pendientes", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // Sección del Historial de Mascotas Registradas (Con enlaces de redirección directos al detalle)
+        // Sección del Historial
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Historial De Mascotas Registradas (${registrations.size})",
+                text = "Historial De Mascotas (${registrations.size})",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = Color.White,
                     fontSize = 13.sp
                 ),
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -210,9 +259,9 @@ fun ProfileLayout(
 
             if (registrations.isEmpty()) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFFF3E9E5)),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
@@ -222,7 +271,7 @@ fun ProfileLayout(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Aún no has registrado ninguna mascota. ¡Comienza a reportar!",
+                            text = "Aún no has registrado ninguna mascota.",
                             textAlign = TextAlign.Center,
                             fontSize = 11.sp,
                             color = Color.Gray
@@ -249,9 +298,9 @@ fun ProfilePetItem(
     onClick: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFFF3E9E5)),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
@@ -272,7 +321,7 @@ fun ProfilePetItem(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFFCEEE9)),
+                        .background(Color.White.copy(alpha = 0.05f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -288,7 +337,7 @@ fun ProfilePetItem(
                         text = pet.name,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = Color.White
                     )
                     Text(
                         text = pet.locationName,
@@ -301,18 +350,17 @@ fun ProfilePetItem(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Chip de estado super sutil
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(100.dp))
-                        .background(if (pet.isSynced) Color(0xFFE2F3EB) else Color(0xFFFCEEE9))
+                        .background(if (pet.isSynced) Color(0xFF81C784).copy(alpha = 0.1f) else Color(0xFFEC6A7C).copy(alpha = 0.1f))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = if (pet.isSynced) "Sincro" else "Pendiente",
                         fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (pet.isSynced) Color(0xFF5F9E81) else MaterialTheme.colorScheme.primary
+                        color = if (pet.isSynced) Color(0xFF81C784) else Color(0xFFEC6A7C)
                     )
                 }
                 Icon(

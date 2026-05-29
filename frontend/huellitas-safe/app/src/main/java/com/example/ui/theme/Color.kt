@@ -1,25 +1,36 @@
 package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 
-// Warm Palette (Orange and Yellow tones)
-val WarmPrimary = Color(0xFFFF9800)      // Orange 500
-val WarmSecondary = Color(0xFFFFC107)    // Amber 500 (Yellowish)
-val WarmTertiary = Color(0xFFFF5722)     // Deep Orange
-val WarmBackground = Color(0xFFFFF8E1)   // Amber 50 (Very light warm yellow)
-val WarmSurface = Color(0xFFFFFFFF)
-val WarmOnPrimary = Color(0xFFFFFFFF)
-val WarmOnBackground = Color(0xFF000000) // Pure Black for maximum contrast
-val WarmOnSurface = Color(0xFF000000)    // Pure Black for maximum contrast
+// Premium Dark Palette (based on the provided image)
+val PremiumDarkBg = Color(0xFF1B1C26)      // Very dark bluish-gray background
+val PremiumDarkSurface = Color(0xFF232533) // Slightly lighter for cards/surfaces
+val PremiumGradientStart = Color(0xFFEC6A7C) // Pink/Magenta
+val PremiumGradientEnd = Color(0xFFF39C6B)   // Orange/Peach
 
-val WarmDialogBackground = Color(0xFFFFFFFF)
+val PremiumOnPrimary = Color(0xFFFFFFFF)
+val PremiumOnBackground = Color(0xFFFFFFFF)
+val PremiumOnSurface = Color(0xFFFFFFFF)
+val PremiumSecondaryText = Color(0xFF8E8E93)
+
+// Legacy mapping to maintain theme functions
+val WarmPrimary = PremiumGradientStart
+val WarmSecondary = PremiumGradientEnd
+val WarmTertiary = Color(0xFF9E77ED) 
+val WarmBackground = PremiumDarkBg
+val WarmSurface = PremiumDarkSurface
+val WarmOnPrimary = PremiumOnPrimary
+val WarmOnBackground = PremiumOnBackground
+val WarmOnSurface = PremiumOnSurface
+
+val WarmDialogBackground = PremiumDarkSurface
 
 // Dark Theme Variants
-val DarkWarmPrimary = Color(0xFFFFB74D)   // Orange 300
-val DarkWarmSecondary = Color(0xFFFFD54F) // Amber 300
-val DarkWarmTertiary = Color(0xFFFF8A65)  // Deep Orange 300
-val DarkWarmBackground = Color(0xFF263238)
-val DarkWarmSurface = Color(0xFF37474F)
-val DarkWarmOnBackground = Color(0xFFECEFF1)
-val DarkWarmOnSurface = Color(0xFFECEFF1)
-
+val DarkWarmPrimary = PremiumGradientStart
+val DarkWarmSecondary = PremiumGradientEnd
+val DarkWarmTertiary = Color(0xFF9E77ED)
+val DarkWarmBackground = PremiumDarkBg
+val DarkWarmSurface = PremiumDarkSurface
+val DarkWarmOnBackground = PremiumOnBackground
+val DarkWarmOnSurface = PremiumOnSurface

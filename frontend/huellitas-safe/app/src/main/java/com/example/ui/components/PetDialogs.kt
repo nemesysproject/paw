@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -66,10 +67,10 @@ fun AddPetDialog(
     var petName by remember(petToEdit) { mutableStateOf(petToEdit?.name ?: "") }
     var petDescription by remember(petToEdit) { mutableStateOf(petToEdit?.description ?: "") }
     
-    var selectedSpeciesId by remember(petToEdit) { mutableStateOf("") }
-    var selectedBreedId by remember(petToEdit) { mutableStateOf<String?>(null) }
-    var selectedGender by remember(petToEdit) { mutableStateOf("") }
-    var selectedStatus by remember(petToEdit) { mutableStateOf("") }
+    var selectedSpeciesId by remember(petToEdit) { mutableStateOf(petToEdit?.speciesId ?: "") }
+    var selectedBreedId by remember(petToEdit) { mutableStateOf(petToEdit?.breedId) }
+    var selectedGender by remember(petToEdit) { mutableStateOf(petToEdit?.gender ?: "") }
+    var selectedStatus by remember(petToEdit) { mutableStateOf(petToEdit?.status ?: "") }
 
     // Coordenadas iniciales por defecto
     var latitude by remember(petToEdit) { mutableDoubleStateOf(petToEdit?.latitude ?: -12.046374) }
@@ -128,25 +129,35 @@ fun AddPetDialog(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = WarmDialogBackground),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.95f).padding(16.dp).verticalScroll(rememberScrollState())
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Header
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = if (petToEdit != null) "Editar Mascota" else "Registrar Mascota", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary))
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Cerrar") }
+                    Text(
+                        text = if (petToEdit != null) "Editar Mascota" else "Registrar Mascota",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                    )
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White) }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
                 // Form Fields
-                OutlinedTextField(value = petName, onValueChange = { petName = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-                OutlinedTextField(value = petDescription, onValueChange = { petDescription = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(
+                    value = petName, onValueChange = { petName = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                )
+                OutlinedTextField(
+                    value = petDescription, onValueChange = { petDescription = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                )
 
                 // Selectors
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)), shape = RoundedCornerShape(14.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.03f)), border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)), shape = RoundedCornerShape(14.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Clasificación", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text("Clasificación", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             // Species
                             var speciesExpanded by remember { mutableStateOf(false) }
@@ -154,10 +165,10 @@ fun AddPetDialog(
                                 OutlinedTextField(
                                     value = speciesCatalog.find { it.id == selectedSpeciesId }?.name ?: "Especie",
                                     onValueChange = {}, readOnly = true, label = { Text("Especie") },
-                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = Color.White) },
                                     modifier = Modifier.fillMaxWidth().clickable { speciesExpanded = true },
                                     enabled = false,
-                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.Black, disabledBorderColor = MaterialTheme.colorScheme.outline, disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.White.copy(alpha = 0.1f), disabledLabelColor = Color.Gray)
                                 )
                                 DropdownMenu(expanded = speciesExpanded, onDismissRequest = { speciesExpanded = false }) {
                                     speciesCatalog.forEach { sp ->
@@ -171,10 +182,10 @@ fun AddPetDialog(
                                 OutlinedTextField(
                                     value = breedsCatalog.find { it.id == selectedBreedId }?.name ?: "Raza",
                                     onValueChange = {}, readOnly = true, label = { Text("Raza") },
-                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = Color.White) },
                                     modifier = Modifier.fillMaxWidth().clickable { breedExpanded = true },
                                     enabled = false,
-                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.Black, disabledBorderColor = MaterialTheme.colorScheme.outline, disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.White.copy(alpha = 0.1f), disabledLabelColor = Color.Gray)
                                 )
                                 DropdownMenu(expanded = breedExpanded, onDismissRequest = { breedExpanded = false }) {
                                     breedsCatalog.forEach { br ->
@@ -191,10 +202,10 @@ fun AddPetDialog(
                                 OutlinedTextField(
                                     value = gendersCatalog.find { it.id == selectedGender }?.name ?: "Género",
                                     onValueChange = {}, readOnly = true, label = { Text("Género") },
-                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = Color.White) },
                                     modifier = Modifier.fillMaxWidth().clickable { genderExpanded = true },
                                     enabled = false,
-                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.Black, disabledBorderColor = MaterialTheme.colorScheme.outline, disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.White.copy(alpha = 0.1f), disabledLabelColor = Color.Gray)
                                 )
                                 DropdownMenu(expanded = genderExpanded, onDismissRequest = { genderExpanded = false }) {
                                     gendersCatalog.forEach { g ->
@@ -208,10 +219,10 @@ fun AddPetDialog(
                                 OutlinedTextField(
                                     value = statusesCatalog.find { it.id == selectedStatus }?.name ?: "Estado",
                                     onValueChange = {}, readOnly = true, label = { Text("Estado") },
-                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = Color.White) },
                                     modifier = Modifier.fillMaxWidth().clickable { statusExpanded = true },
                                     enabled = false,
-                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.Black, disabledBorderColor = MaterialTheme.colorScheme.outline, disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.White.copy(alpha = 0.1f), disabledLabelColor = Color.Gray)
                                 )
                                 DropdownMenu(expanded = statusExpanded, onDismissRequest = { statusExpanded = false }) {
                                     statusesCatalog.forEach { st ->
@@ -224,31 +235,31 @@ fun AddPetDialog(
                 }
 
                 // Location
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)), shape = RoundedCornerShape(14.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.03f)), border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)), shape = RoundedCornerShape(14.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text("Ubicación", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            Text("Ubicación", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White)
                             Button(onClick = { checkAndRequestPermission(Manifest.permission.ACCESS_FINE_LOCATION) {
                                 locationHelper.getLastLocation({ lat, lng -> latitude = lat; longitude = lng; locationName = "Registro GPS: [$lat, $lng]" }, {})
-                            }}, shape = RoundedCornerShape(8.dp)) { Icon(Icons.Default.GpsFixed, null, modifier = Modifier.size(16.dp)); Text("GPS", fontSize = 12.sp) }
+                            }}, shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Icon(Icons.Default.GpsFixed, null, modifier = Modifier.size(16.dp)); Text("GPS", fontSize = 12.sp) }
                         }
-                        OutlinedTextField(value = locationName, onValueChange = { locationName = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp))
+                        OutlinedTextField(value = locationName, onValueChange = { locationName = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White))
                     }
                 }
 
                 // MULTIMEDIA: FOTOS
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)), shape = RoundedCornerShape(14.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.03f)), border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)), shape = RoundedCornerShape(14.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Column { Text("Fotos (${formPhotos.size}/10)", fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Text("Máximo 10", fontSize = 11.sp, color = Color.Gray) }
+                            Column { Text("Fotos (${formPhotos.size}/10)", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White); Text("Máximo 10", fontSize = 11.sp, color = Color.Gray) }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Button(onClick = { checkAndRequestPermission(Manifest.permission.CAMERA) { 
                                     MediaUtils.createPhotoFile(context).let { rawPhotoFile = it; cameraLauncher.launch(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)) }
-                                } }, shape = RoundedCornerShape(8.dp)) { Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(16.dp)) }
+                                } }, shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) { Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(16.dp)) }
                                 Button(onClick = { if (formPhotos.size < 10) viewModel.addPhotoToForm(MediaUtils.getMockPetImage(formPhotos.size)) }, shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(16.dp)) }
                             }
                         }
-                        if (formPhotos.isEmpty()) Box(modifier = Modifier.fillMaxWidth().height(60.dp).border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Text("Sin fotos", fontSize = 11.sp, color = Color.Gray) }
+                        if (formPhotos.isEmpty()) Box(modifier = Modifier.fillMaxWidth().height(60.dp).border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Text("Sin fotos", fontSize = 11.sp, color = Color.Gray) }
                         else LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             itemsIndexed(formPhotos, key = { idx, _ -> "photo_$idx" }) { idx, path ->
                                 Box(modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp))) {
@@ -261,34 +272,39 @@ fun AddPetDialog(
                 }
 
                 // MULTIMEDIA: VIDEO
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)), shape = RoundedCornerShape(14.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.03f)), border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)), shape = RoundedCornerShape(14.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Column { Text("Video", fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Text("Opcional", fontSize = 11.sp, color = Color.Gray) }
+                            Column { Text("Video", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White); Text("Opcional", fontSize = 11.sp, color = Color.Gray) }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Button(onClick = { checkAndRequestPermission(Manifest.permission.CAMERA) { 
                                     MediaUtils.createVideoFile(context).let { rawVideoFile = it; videoLauncher.launch(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)) }
-                                } }, shape = RoundedCornerShape(8.dp)) { Icon(Icons.Default.Videocam, null, modifier = Modifier.size(16.dp)) }
+                                } }, shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) { Icon(Icons.Default.Videocam, null, modifier = Modifier.size(16.dp)) }
                                 Button(onClick = { viewModel.setVideoPathInForm("/mock_video.mp4") }, shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp)) }
                             }
                         }
-                        formVideoPath?.let { path ->
+                        formVideoPath?.let { _ ->
                             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
-                                Text(text = "Video listo!", fontSize = 11.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                                IconButton(onClick = { viewModel.setVideoPathInForm(null) }, modifier = Modifier.size(16.dp)) { Icon(Icons.Default.Close, null, modifier = Modifier.size(12.dp)) }
+                                Text(text = "Video listo!", fontSize = 11.sp, modifier = Modifier.weight(1f).padding(start = 8.dp), color = Color.White)
+                                IconButton(onClick = { viewModel.setVideoPathInForm(null) }, modifier = Modifier.size(16.dp)) { Icon(Icons.Default.Close, null, modifier = Modifier.size(12.dp), tint = Color.White) }
                             }
-                        } ?: Box(modifier = Modifier.fillMaxWidth().height(40.dp).border(1.dp, Color.LightGray, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Text("Sin video", fontSize = 11.sp, color = Color.Gray) }
+                        } ?: Box(modifier = Modifier.fillMaxWidth().height(40.dp).border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Text("Sin video", fontSize = 11.sp, color = Color.Gray) }
                     }
                 }
 
                 // Actions
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), shape = RoundedCornerShape(100.dp)) { Text("Cancelar") }
-                    Button(onClick = {
-                        if (petToEdit != null) viewModel.updatePet(petToEdit.remoteId, petToEdit.id, petName, petDescription, selectedGender, selectedStatus, selectedSpeciesId, selectedBreedId, latitude, longitude, formPhotos, onSaveSuccess)
-                        else viewModel.savePetRegistration(petName, petDescription, selectedGender, selectedStatus, selectedSpeciesId, selectedBreedId, latitude, longitude, locationName, onSaveSuccess)
-                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(100.dp)) { Text("Guardar") }
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), shape = RoundedCornerShape(100.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))) { Text("Cancelar", color = Color.White) }
+                    Button(
+                        onClick = {
+                            if (petToEdit != null) viewModel.updatePet(petToEdit.remoteId, petToEdit.id, petName, petDescription, selectedGender, selectedStatus, selectedSpeciesId, selectedBreedId, latitude, longitude, formPhotos, onSaveSuccess)
+                            else viewModel.savePetRegistration(petName, petDescription, selectedGender, selectedStatus, selectedSpeciesId, selectedBreedId, latitude, longitude, locationName, onSaveSuccess)
+                        },
+                        modifier = Modifier.weight(1f).background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)), RoundedCornerShape(100.dp)),
+                        shape = RoundedCornerShape(100.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                    ) { Text("Guardar", fontWeight = FontWeight.Bold, color = Color.White) }
                 }
             }
         }

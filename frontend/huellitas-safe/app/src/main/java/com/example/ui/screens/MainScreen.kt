@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
@@ -48,6 +49,10 @@ fun MainScreen(viewModel: PetViewModel) {
                 remoteId = remote.id,
                 name = remote.name ?: "Mascota sin Nombre",
                 description = remote.description ?: "Sin descripción",
+                gender = remote.gender,
+                status = remote.status,
+                speciesId = remote.speciesId,
+                breedId = remote.breedId,
                 photosJson = remote.media.joinToString(",") { it.url },
                 videoPath = remote.media.find { it.type == "SightingVideo" }?.url,
                 latitude = remote.lastLatitude ?: 0.0,
@@ -65,7 +70,7 @@ fun MainScreen(viewModel: PetViewModel) {
     var showAddDialog by remember { mutableStateOf(false) }
     var petToEdit by remember { mutableStateOf<PetRegistration?>(null) }
     var selectedPetForDetail by remember { mutableStateOf<PetRegistration?>(null) }
-    var currentTab by remember { mutableStateOf("registro") }
+    var currentTab by remember { mutableStateOf("inicio") }
 
     // Mock notifications for UI demonstration
     var notificationList by remember { mutableStateOf(listOf(
@@ -79,13 +84,17 @@ fun MainScreen(viewModel: PetViewModel) {
         if (activity != null) {
             BiometricHelper.showPrompt(
                 activity = activity,
-                onSuccess = { viewModel.setAuthenticated(true) },
+                onSuccess = {
+                    viewModel.setAuthenticated(true)
+                    viewModel.biometricLogin()
+                },
                 onError = { error ->
                     Toast.makeText(context, "Acceso denegado: $error", Toast.LENGTH_LONG).show()
                 }
             )
         } else {
             viewModel.setAuthenticated(true)
+            viewModel.biometricLogin()
         }
     }
 
@@ -94,16 +103,20 @@ fun MainScreen(viewModel: PetViewModel) {
     }
 
     if (!isLoggedIn) {
-        LoginRegisterRedesignScreen(viewModel)
+        LoginRegisterRedesignScreen(
+            viewModel = viewModel,
+            onBiometricAuthRequested = { triggerBiometricAuth() }
+        )
     } else if (!isAuthenticated) {
         BiometricLockScreen(isBiometricAvailable = BiometricHelper.isBiometricAvailable(context), onUnlockRequested = { triggerBiometricAuth() })
     } else {
         Scaffold(
+            containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Huellitas Safe", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("Huellitas Safe", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.toggleNetwork(!isOnline) }) {
                                 Icon(if (isOnline) Icons.Default.CloudQueue else Icons.Default.CloudOff, null, modifier = Modifier.size(14.dp), tint = if (isOnline) Color(0xFF5F9E81) else Color.Gray)
                                 Text(if (isOnline) "Modo Online" else "Modo Offline", fontSize = 10.sp, color = if (isOnline) Color(0xFF5F9E81) else Color.Gray)
@@ -111,28 +124,152 @@ fun MainScreen(viewModel: PetViewModel) {
                         }
                     },
                     actions = {
-                        IconButton(onClick = { viewModel.setAuthenticated(false) }) { Icon(Icons.Default.Fingerprint, "BIO LOCK") }
-                    }
+                        IconButton(onClick = { viewModel.setAuthenticated(false) }) { Icon(Icons.Default.Fingerprint, "BIO LOCK", tint = Color.White) }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White
+                    )
                 )
             },
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(selected = currentTab == "registro", onClick = { currentTab = "registro" }, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("REGISTRO") })
-                    NavigationBarItem(selected = currentTab == "notificaciones", onClick = { currentTab = "notificaciones" }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("ALERTAS") })
-                    NavigationBarItem(selected = currentTab == "perfil", onClick = { currentTab = "perfil" }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("PERFIL") })
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    tonalElevation = 0.dp
+                ) {
+                    NavigationBarItem(
+                        selected = currentTab == "inicio",
+                        onClick = { currentTab = "inicio" },
+                        icon = { Icon(Icons.Default.Home, null) },
+                        label = { Text("INICIO") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = Color.Gray,
+                            unselectedTextColor = Color.Gray,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == "mascotas",
+                        onClick = { currentTab = "mascotas" },
+                        icon = { Icon(Icons.Default.Pets, null) },
+                        label = { Text("MASCOTAS") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = Color.Gray,
+                            unselectedTextColor = Color.Gray,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == "perfil",
+                        onClick = { currentTab = "perfil" },
+                        icon = { Icon(Icons.Default.Person, null) },
+                        label = { Text("PERFIL") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = Color.Gray,
+                            unselectedTextColor = Color.Gray,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        )
+                    )
                 }
             },
             floatingActionButton = {
-                if (currentTab == "registro") {
-                    ExtendedFloatingActionButton(onClick = { showAddDialog = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Reportar") })
+                if (currentTab == "mascotas") {
+                    ExtendedFloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        icon = { Icon(Icons.Default.Add, null) },
+                        text = { Text("Reportar") },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
+                        shape = RoundedCornerShape(100.dp)
+                    )
                 }
             }
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding).fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))))) {
+            val currentThemeName by viewModel.currentTheme.collectAsStateWithLifecycle()
+            
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                if (currentThemeName == "Glass") {
+                    // Nature-like background for Glass theme
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF1B2B21), // Dark forest green
+                                        Color(0xFF121417)  // Back to dark base
+                                    )
+                                )
+                            )
+                    )
+                }
+
+                // Background blurred circles logic
+                Box(
+                    modifier = Modifier
+                        .size(300.dp)
+                        .offset(x = (-100).dp, y = (-50).dp)
+                        .blur(80.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    if (currentThemeName == "Glass") Color.White.copy(alpha = 0.15f) 
+                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(250.dp)
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 100.dp, y = (-150).dp)
+                        .blur(100.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    if (currentThemeName == "Glass") Color.White.copy(alpha = 0.1f)
+                                    else MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
                 when (currentTab) {
-                    "registro" -> SurfaceLayout(unifiedPets, isSyncing, syncMessage, isOnline, { selectedPetForDetail = it }, { viewModel.deleteRegistration(it.id, it.remoteId) }, { viewModel.triggerSync() })
-                    "notificaciones" -> NotificationsLayout(notificationList, { notificationList = notificationList.map { it.copy(isRead = true) } }, { id -> notificationList = notificationList.filter { it.id != id } }, { nearbyAlertsEnabled = !nearbyAlertsEnabled }, nearbyAlertsEnabled, {})
-                    "perfil" -> ProfileLayout(unifiedPets, viewModel.currentUserName ?: "", viewModel.currentUserEmail ?: "", {}, {}, { selectedPetForDetail = it }, {}, { viewModel.logout() })
+                    "inicio" -> HomeScreen(unifiedPets, notificationList, { notificationList = notificationList.map { it.copy(isRead = true) } }, { id -> notificationList = notificationList.filter { it.id != id } }, { nearbyAlertsEnabled = !nearbyAlertsEnabled }, nearbyAlertsEnabled)
+                    "mascotas" -> SurfaceLayout(unifiedPets, isSyncing, syncMessage, isOnline, { selectedPetForDetail = it }, { viewModel.deleteRegistration(it.id, it.remoteId) }, { viewModel.triggerSync() })
+                    "perfil" -> {
+                        val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
+                        ProfileLayout(
+                            registrations = unifiedPets,
+                            name = viewModel.currentUserName ?: "",
+                            email = viewModel.currentUserEmail ?: "",
+                            profilePhotoUrl = null,
+                            currentTheme = currentTheme,
+                            onThemeChanged = { viewModel.setTheme(it) },
+                            onNameChanged = {},
+                            onEmailChanged = {},
+                            onPetClicked = { selectedPetForDetail = it },
+                            onSaveProfile = {},
+                            onLogout = { viewModel.logout() }
+                        )
+                    }
                 }
             }
         }

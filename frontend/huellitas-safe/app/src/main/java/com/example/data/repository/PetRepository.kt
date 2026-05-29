@@ -15,10 +15,20 @@ import java.io.File
 
 class PetRepository(
     private val dao: PetRegistrationDao,
+    private val themeDao: com.example.data.local.ThemeDao,
+    private val catalogDao: com.example.data.local.CatalogDao,
     private val apiService: ApiService
 ) {
 
     val allRegistrations: Flow<List<PetRegistration>> = dao.getAllRegistrationsFlow()
+    val selectedTheme: Flow<AppTheme?> = themeDao.getSelectedTheme()
+
+    val speciesCatalog: Flow<List<SpeciesDto>> = catalogDao.getAllSpeciesFlow()
+    val gendersCatalog: Flow<List<GenderDto>> = catalogDao.getAllGendersFlow()
+    val statusesCatalog: Flow<List<StatusDto>> = catalogDao.getAllStatusesFlow()
+    val allBreedsCatalog: Flow<List<BreedDto>> = catalogDao.getAllBreedsFlow()
+
+    fun getBreedsBySpecies(speciesId: String): Flow<List<BreedDto>> = catalogDao.getBreedsBySpeciesFlow(speciesId)
 
     suspend fun login(email: String, password: String) = apiService.login(LoginRequest(email, password))
 
@@ -50,45 +60,27 @@ class PetRepository(
         dao.updateRemoteIdAndSync(id, remoteId)
     }
 
-    // --- CATALOGS ---
-    suspend fun fetchSpecies(): List<SpeciesDto> {
-        val response = apiService.getSpecies()
-        if (response.isSuccessful) {
-            return response.body() ?: emptyList()
-        }
-        return emptyList()
-    }
+    // --- CATALOGS (Sync Logic) ---
+    suspend fun syncCatalogs() {
+        try {
+            // Species
+            val remoteSpecies = apiService.getSpecies().body() ?: emptyList()
+            catalogDao.insertSpecies(remoteSpecies)
 
-    suspend fun fetchGenders(): List<GenderDto> {
-        val response = apiService.getGenders()
-        if (response.isSuccessful) {
-            return response.body() ?: emptyList()
-        }
-        return emptyList()
-    }
+            // Breeds
+            val remoteBreeds = apiService.getBreeds().body() ?: emptyList()
+            catalogDao.insertBreeds(remoteBreeds)
 
-    suspend fun fetchStatuses(): List<StatusDto> {
-        val response = apiService.getStatuses()
-        if (response.isSuccessful) {
-            return response.body() ?: emptyList()
-        }
-        return emptyList()
-    }
+            // Genders
+            val remoteGenders = apiService.getGenders().body() ?: emptyList()
+            catalogDao.insertGenders(remoteGenders)
 
-    suspend fun fetchAllBreeds(): List<BreedDto> {
-        val response = apiService.getBreeds()
-        if (response.isSuccessful) {
-            return response.body() ?: emptyList()
+            // Statuses
+            val remoteStatuses = apiService.getStatuses().body() ?: emptyList()
+            catalogDao.insertStatuses(remoteStatuses)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        return emptyList()
-    }
-
-    suspend fun fetchBreedsBySpecies(speciesId: String): List<BreedDto> {
-        val response = apiService.getBreedsBySpecies(speciesId)
-        if (response.isSuccessful) {
-            return response.body() ?: emptyList()
-        }
-        return emptyList()
     }
 
     // --- FETCH REMOTE PETS ---
@@ -311,5 +303,10 @@ class PetRepository(
             e.printStackTrace()
             false
         }
+    }
+
+    // --- THEME ---
+    suspend fun setTheme(themeName: String) {
+        themeDao.setTheme(AppTheme(themeName = themeName))
     }
 }

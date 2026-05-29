@@ -46,6 +46,14 @@ class SessionManager(context: Context) {
         return getAccessToken() != null
     }
 
+    fun clearTokens() {
+        prefs.edit().apply {
+            remove(KEY_ACCESS_TOKEN)
+            remove(KEY_REFRESH_TOKEN)
+            apply()
+        }
+    }
+
     fun clearSession() {
         prefs.edit().clear().apply()
     }
