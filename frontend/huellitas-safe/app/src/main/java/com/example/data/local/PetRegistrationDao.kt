@@ -25,6 +25,15 @@ interface PetRegistrationDao {
     @Query("UPDATE pet_registrations SET isSynced = 1 WHERE id = :id")
     suspend fun markAsSynced(id: Int)
 
+    @Query("UPDATE pet_registrations SET remoteId = :remoteId, isSynced = 1 WHERE id = :id")
+    suspend fun updateRemoteIdAndSync(id: Int, remoteId: String)
+
+    @Query("SELECT * FROM pet_registrations WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): PetRegistration?
+
     @Query("DELETE FROM pet_registrations WHERE id = :id")
     suspend fun deleteRegistration(id: Int)
+
+    @Query("DELETE FROM pet_registrations WHERE remoteId = :remoteId")
+    suspend fun deleteByRemoteId(remoteId: String)
 }

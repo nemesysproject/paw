@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.data.model.PetRegistration
 
-@Database(entities = [PetRegistration::class], version = 1, exportSchema = false)
+@Database(entities = [PetRegistration::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun petRegistrationDao(): PetRegistrationDao
 

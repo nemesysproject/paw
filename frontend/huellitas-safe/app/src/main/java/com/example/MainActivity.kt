@@ -16,15 +16,17 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Inicializar base de datos SQLite (Room)
+        // Inicializar base de datos SQLite (Room) y Capa de Red
         val database = AppDatabase.getDatabase(this)
-        val repository = PetRepository(database.petRegistrationDao())
+        val apiService = com.example.data.api.RetrofitClient.getApiService(this)
+        val repository = com.example.data.repository.PetRepository(database.petRegistrationDao(), apiService)
+        val sessionManager = com.example.data.local.SessionManager(this)
         
         // Instanciar el ViewModel
         val viewModel = ViewModelProvider(
             this,
-            PetViewModelFactory(repository)
-        )[PetViewModel::class.java]
+            com.example.ui.viewmodel.PetViewModelFactory(repository, sessionManager)
+        )[com.example.ui.viewmodel.PetViewModel::class.java]
 
         enableEdgeToEdge()
         setContent {

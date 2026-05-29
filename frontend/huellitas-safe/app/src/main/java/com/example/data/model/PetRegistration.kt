@@ -7,6 +7,7 @@ import java.io.Serializable
 @Entity(tableName = "pet_registrations")
 data class PetRegistration(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val remoteId: String? = null, // Backend UUID representing this pet
     val name: String,
     val description: String,
     val photosJson: String, // Comma-separated string or JSON list of Local URIs (max 10)

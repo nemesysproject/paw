@@ -2,24 +2,24 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Professional Polish Palette
-val WarmPrimary = Color(0xFF9C4146)      // Deep Terracotta (#9c4146)
-val WarmSecondary = Color(0xFFE3916E)    // Soft Orange / Peach (#e3916e)
-val WarmTertiary = Color(0xFF7A595B)     // Warm Plum / Sage (#7a595b)
-val WarmBackground = Color(0xFFFDF8F6)   // Main light warm background (#fdf8f6)
-val WarmSurface = Color(0xFFFFFFFF)      // Pure White surfaces for contrast
+// Warm Palette (Orange and Yellow tones)
+val WarmPrimary = Color(0xFFFF9800)      // Orange 500
+val WarmSecondary = Color(0xFFFFC107)    // Amber 500 (Yellowish)
+val WarmTertiary = Color(0xFFFF5722)     // Deep Orange
+val WarmBackground = Color(0xFFFFF8E1)   // Amber 50 (Very light warm yellow)
+val WarmSurface = Color(0xFFFFFFFF)
 val WarmOnPrimary = Color(0xFFFFFFFF)
-val WarmOnBackground = Color(0xFF2B1718) // Rich dark accent (#2b1718)
-val WarmOnSurface = Color(0xFF2B1718)
+val WarmOnBackground = Color(0xFF000000) // Pure Black for maximum contrast
+val WarmOnSurface = Color(0xFF000000)    // Pure Black for maximum contrast
 
-val WarmDialogBackground = Color(0xFFFFFFFF) // Keep Dialogs beautifully white
+val WarmDialogBackground = Color(0xFFFFFFFF)
 
-// Dark Theme Variants (refined to fit the scheme)
-val DarkWarmPrimary = Color(0xFFE3916E)
-val DarkWarmSecondary = Color(0xFFFCEEE9)
-val DarkWarmTertiary = Color(0xFFD6C2C4)
-val DarkWarmBackground = Color(0xFF2B1718)
-val DarkWarmSurface = Color(0xFF382526)
-val DarkWarmOnBackground = Color(0xFFFDF8F6)
-val DarkWarmOnSurface = Color(0xFFFDF8F6)
+// Dark Theme Variants
+val DarkWarmPrimary = Color(0xFFFFB74D)   // Orange 300
+val DarkWarmSecondary = Color(0xFFFFD54F) // Amber 300
+val DarkWarmTertiary = Color(0xFFFF8A65)  // Deep Orange 300
+val DarkWarmBackground = Color(0xFF263238)
+val DarkWarmSurface = Color(0xFF37474F)
+val DarkWarmOnBackground = Color(0xFFECEFF1)
+val DarkWarmOnSurface = Color(0xFFECEFF1)
 
