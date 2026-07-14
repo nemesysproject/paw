@@ -5,8 +5,10 @@ use sqlx::FromRow;
 #[derive(Debug, Serialize, Deserialize, ToSchema, FromRow)]
 pub struct DashboardStats {
     pub total_lost: i64,
-    pub total_found: i64,
-    pub total_adopted: i64,
+    pub total_adoption: i64,
+    pub total_street: i64,
+    pub total_at_risk: i64,
+    pub total_safe: i64,
     pub total_pets: i64,
 }
 

@@ -10,6 +10,13 @@ import com.pawrescue.ui.screens.MainScreen
 import com.pawrescue.ui.theme.MyApplicationTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+
+@Composable
+fun Greeting(name: String) {
+    Text(text = "Hello $name!")
+}
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

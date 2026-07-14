@@ -9,8 +9,10 @@ impl DashboardRepository {
             r#"
             SELECT 
                 COUNT(*) FILTER (WHERE status = 'LOST') as total_lost,
-                COUNT(*) FILTER (WHERE status = 'FOUND') as total_found,
-                COUNT(*) FILTER (WHERE status = 'ADOPTED') as total_adopted,
+                COUNT(*) FILTER (WHERE status = 'ADOPTION') as total_adoption,
+                COUNT(*) FILTER (WHERE status = 'STREET') as total_street,
+                COUNT(*) FILTER (WHERE status = 'AT_RISK') as total_at_risk,
+                COUNT(*) FILTER (WHERE status = 'SAFE') as total_safe,
                 COUNT(*) as total_pets
             FROM "Pet"
             "#
@@ -20,8 +22,10 @@ impl DashboardRepository {
 
         Ok(DashboardStats {
             total_lost: row.get("total_lost"),
-            total_found: row.get("total_found"),
-            total_adopted: row.get("total_adopted"),
+            total_adoption: row.get("total_adoption"),
+            total_street: row.get("total_street"),
+            total_at_risk: row.get("total_at_risk"),
+            total_safe: row.get("total_safe"),
             total_pets: row.get("total_pets"),
         })
     }

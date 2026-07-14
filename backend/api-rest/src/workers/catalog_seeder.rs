@@ -81,10 +81,10 @@ static GENDERS: &[(&str, &str)] = &[
 
 static STATUSES: &[(&str, &str)] = &[
     ("LOST", "Perdido"),
-    ("FOUND", "Encontrado"),
     ("ADOPTION", "En Adopción"),
-    ("ADOPTED", "Adoptado"),    
-    ("RISK", "En Riesgo"),
+    ("STREET", "Situación de Calle"),
+    ("AT_RISK", "En Riesgo"),
+    ("SAFE", "A Salvo"),
 ];
 
 /// Ejecuta el seeder de catálogos al inicio del servicio.
