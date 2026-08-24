@@ -40,7 +40,7 @@ where
         }
 
         let token = &auth_header[7..];
-        let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret_por_defecto_no_usar_en_produccion".to_string());
+        let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
         let token_data = decode::<Claims>(
             token,
@@ -57,7 +57,7 @@ where
 }
 
 pub fn generate_tokens(user_id: &str, role: &str) -> Result<(String, String), jsonwebtoken::errors::Error> {
-    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret_por_defecto_no_usar_en_produccion".to_string());
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     
     let access_exp = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::hours(1))
@@ -97,7 +97,7 @@ pub fn generate_tokens(user_id: &str, role: &str) -> Result<(String, String), js
 }
 
 pub fn verify_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret_por_defecto_no_usar_en_produccion".to_string());
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),

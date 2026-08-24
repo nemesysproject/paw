@@ -9,7 +9,7 @@ pub struct SearchParams {
     pub radius_meters: Option<u32>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PetDetailResponse {
     #[serde(flatten)]
     pub pet: Pet,

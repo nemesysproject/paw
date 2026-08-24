@@ -15,6 +15,7 @@ use uuid::Uuid;
 use geohash::{encode, Coord};
 use chrono::Utc;
 use crate::infrastructure::auth::JwtMiddleware;
+use validator::Validate;
 
 
 /// Registra una nueva mascota con fotos/videos.
@@ -68,6 +69,10 @@ pub async fn create_pet(
             return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response());
         }
     };
+
+    if let Err(e) = command.validate() {
+        return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Error de validación", "details": e}))).into_response());
+    }
 
     if files.is_empty() {
         tracing::warn!("Rechazando creación de mascota: No se enviaron archivos.");
@@ -208,6 +213,10 @@ pub async fn update_pet(
         Ok(c) => c,
         Err(e) => return Err((StatusCode::BAD_REQUEST, Json(json!({"error": format!("Datos de mascota inválidos: {}", e)}))).into_response()),
     };
+
+    if let Err(e) = command.validate() {
+        return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Error de validación", "details": e}))).into_response());
+    }
 
     let geohash = if let (Some(lat), Some(lon)) = (command.last_latitude, command.last_longitude) {
         encode(Coord { x: lon, y: lat }, 10).ok()

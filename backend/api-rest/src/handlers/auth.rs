@@ -9,10 +9,14 @@ use crate::models::auth::{LoginRequest, RegisterRequest, TokenResponse, RefreshR
 use crate::models::entities::User;
 use crate::repositories::user_repo::UserRepository;
 use crate::infrastructure::auth::{generate_tokens, verify_token};
-use bcrypt::{hash, verify, DEFAULT_COST};
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use uuid::Uuid;
 use chrono::Utc;
 use serde_json::json;
+use validator::Validate;
 
 /// Registra un nuevo usuario.
 #[utoipa::path(
@@ -29,14 +33,23 @@ pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<Response, Response> {
+    if let Err(e) = req.validate() {
+        return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Error de validación", "details": e}))).into_response());
+    }
+
     // Verificar si el usuario ya existe
     if let Ok(Some(_)) = UserRepository::find_by_email(&state.pool, &req.email).await {
         return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Email already exists"}))).into_response());
     }
 
-    let hashed_password = hash(req.password, DEFAULT_COST).map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
-    })?;
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let hashed_password = argon2.hash_password(req.password.as_bytes(), &salt)
+        .map_err(|e| {
+            tracing::error!("Error hashing password: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
+        })?
+        .to_string();
 
     let now = Utc::now().naive_utc();
     let user = User {
@@ -51,7 +64,7 @@ pub async fn register(
 
     UserRepository::create(&state.pool, &user).await.map_err(|e| {
         tracing::error!("Error creando usuario en la BD: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
     })?;
 
     Ok(StatusCode::CREATED.into_response())
@@ -72,18 +85,29 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> Result<Response, Response> {
+    if let Err(e) = req.validate() {
+        return Err((StatusCode::BAD_REQUEST, Json(json!({"error": "Error de validación", "details": e}))).into_response());
+    }
+
     let user = UserRepository::find_by_email(&state.pool, &req.email).await.map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        tracing::error!("Error buscando usuario por email: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
     })?.ok_or_else(|| {
         (StatusCode::UNAUTHORIZED, Json(json!({"error": "Invalid credentials"}))).into_response()
     })?;
 
-    if !verify(req.password, &user.password).unwrap_or(false) {
+    let parsed_hash = PasswordHash::new(&user.password).map_err(|e| {
+        tracing::error!("Error parsing password hash: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
+    })?;
+
+    if Argon2::default().verify_password(req.password.as_bytes(), &parsed_hash).is_err() {
         return Err((StatusCode::UNAUTHORIZED, Json(json!({"error": "Invalid credentials"}))).into_response());
     }
 
     let (access, refresh) = generate_tokens(&user.id, &user.role).map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        tracing::error!("Error generando tokens: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
     })?;
 
     Ok((StatusCode::OK, Json(TokenResponse {
@@ -115,13 +139,15 @@ pub async fn refresh(
 
     // Opcional: Verificar que el usuario aún exista
     let user = UserRepository::find_by_id(&state.pool, &claims.sub).await.map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        tracing::error!("Error buscando usuario por ID: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
     })?.ok_or_else(|| {
         (StatusCode::UNAUTHORIZED, Json(json!({"error": "User not found"}))).into_response()
     })?;
 
     let (access, refresh) = generate_tokens(&user.id, &user.role).map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        tracing::error!("Error generando tokens: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Error interno del servidor"}))).into_response()
     })?;
 
     Ok((StatusCode::OK, Json(TokenResponse {

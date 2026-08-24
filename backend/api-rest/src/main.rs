@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("✅ MongoDB: Conexión establecida correctamente.");
 
     let pet_sync_worker = PetSyncWorker::new(rabbit_service.clone(), mongo_service.clone());
-    tokio::spawn(async move {
+    let worker_handle = tokio::spawn(async move {
         if let Err(e) = pet_sync_worker.run().await {
             tracing::error!("❌ Error en PetSyncWorker: {}", e);
         }
@@ -123,10 +123,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     tracing::info!("✅ Servidor escuchando en http://{}", addr);
     
-    axum::serve(listener, app).await.map_err(|e| {
-        tracing::error!("❌ Error en el servidor axum: {}", e);
-        e
-    })?;
+    // Configurar graceful shutdown
+    let shutdown_signal = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Fallo al instalar el manejador de CTRL+C");
+        tracing::info!("🛑 Señal de apagado recibida, iniciando graceful shutdown...");
+    };
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal)
+        .await
+        .map_err(|e| {
+            tracing::error!("❌ Error en el servidor axum: {}", e);
+            e
+        })?;
+
+    tracing::info!("🛑 Servidor web detenido. Esperando a que los workers terminen...");
+    
+    // Aquí idealmente se enviaría una señal de cancelación al worker, 
+    // pero por ahora simplemente esperamos a que termine (o forzamos salida si tarda mucho)
+    // worker_handle.abort(); // Si queremos forzar
+    
+    tracing::info!("✅ Apagado completado.");
 
     Ok(())
 }

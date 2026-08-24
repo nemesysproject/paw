@@ -1,16 +1,22 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use validator::Validate;
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct RegisterRequest {
+    #[validate(email)]
     pub email: String,
+    #[validate(length(min = 8, message = "La contraseña debe tener al menos 8 caracteres"))]
     pub password: String,
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct LoginRequest {
+    #[validate(email)]
     pub email: String,
+    #[validate(length(min = 1))]
     pub password: String,
 }
 

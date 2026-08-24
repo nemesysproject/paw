@@ -6,9 +6,9 @@ use axum::{
 };
 use crate::AppState;
 use crate::models::pet::queries::{SearchParams, PetDetailResponse};
-use crate::repositories::pet_repo::PetRepository;
-use crate::repositories::media_repo::MediaRepository;
 use geohash::{encode, Coord, neighbors};
+use mongodb::bson::{doc, from_document};
+use futures_lite::stream::StreamExt;
 
 /// Obtiene el detalle de una mascota por su ID.
 #[utoipa::path(
@@ -25,19 +25,24 @@ pub async fn get_pet_by_id(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Response, Response> {
-    let pet = PetRepository::find_by_id(&state.pool, &id).await.map_err(|e| {
-        eprintln!("Error en BD: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
-    })?;
-    match pet {
-        Some(pet) => {
-            let media = MediaRepository::find_by_pet_id(&state.pool, &id).await.map_err(|e| {
-                eprintln!("Error en BD: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
-            })?;
-            Ok((StatusCode::OK, Json(PetDetailResponse { pet, media })).into_response())
+    let collection = state.mongo_service.pets_collection();
+    let filter = doc! { "id": &id };
+
+    match collection.find_one(filter).await {
+        Ok(Some(doc)) => {
+            match from_document::<PetDetailResponse>(doc) {
+                Ok(pet_detail) => Ok((StatusCode::OK, Json(pet_detail)).into_response()),
+                Err(e) => {
+                    tracing::error!("Error deserializando desde MongoDB: {:?}", e);
+                    Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Error interno del servidor"}))).into_response())
+                }
+            }
         }
-        None => Ok(StatusCode::NOT_FOUND.into_response()),
+        Ok(None) => Ok(StatusCode::NOT_FOUND.into_response()),
+        Err(e) => {
+            tracing::error!("Error consultando MongoDB: {:?}", e);
+            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Error interno del servidor"}))).into_response())
+        }
     }
 }
 
@@ -53,24 +58,29 @@ pub async fn get_pet_by_id(
 pub async fn list_pets(
     State(state): State<AppState>,
 ) -> Result<Response, Response> {
-    let pets = PetRepository::find_all(&state.pool).await.map_err(|e| {
-        eprintln!("Error en BD: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
-    })?;
+    let collection = state.mongo_service.pets_collection();
+    
+    let mut cursor = match collection.find(doc! {}).await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Error consultando MongoDB: {:?}", e);
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Error interno del servidor"}))).into_response());
+        }
+    };
 
-    let pet_ids: Vec<String> = pets.iter().map(|p| p.id.clone()).collect();
-    let all_media = MediaRepository::find_by_pet_ids(&state.pool, &pet_ids).await.map_err(|e| {
-        eprintln!("Error en BD (media): {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
-    })?;
-
-    let response: Vec<PetDetailResponse> = pets.into_iter().map(|pet| {
-        let media = all_media.iter()
-            .filter(|m| m.pet_id == pet.id)
-            .cloned()
-            .collect();
-        PetDetailResponse { pet, media }
-    }).collect();
+    let mut response: Vec<PetDetailResponse> = Vec::new();
+    while let Some(result) = cursor.next().await {
+        match result {
+            Ok(doc) => {
+                if let Ok(pet_detail) = from_document::<PetDetailResponse>(doc) {
+                    response.push(pet_detail);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Error iterando cursor de MongoDB: {:?}", e);
+            }
+        }
+    }
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -92,24 +102,37 @@ pub async fn search_pets_by_location(
     let radius = params.radius_meters.unwrap_or(1000);
     let search_patterns = get_geohash_prefixes(params.lat, params.lon, radius);
     
-    let pets = PetRepository::find_by_geohash_prefixes(&state.pool, &search_patterns).await.map_err(|e| {
-        eprintln!("Error en BD: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
-    })?;
-
-    let pet_ids: Vec<String> = pets.iter().map(|p| p.id.clone()).collect();
-    let all_media = MediaRepository::find_by_pet_ids(&state.pool, &pet_ids).await.map_err(|e| {
-        eprintln!("Error en BD (media): {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
-    })?;
-
-    let response: Vec<PetDetailResponse> = pets.into_iter().map(|pet| {
-        let media = all_media.iter()
-            .filter(|m| m.pet_id == pet.id)
-            .cloned()
-            .collect();
-        PetDetailResponse { pet, media }
+    // Construir filtro $or para MongoDB usando expresiones regulares para prefijos
+    let or_conditions: Vec<mongodb::bson::Document> = search_patterns.into_iter().map(|prefix| {
+        // Remover el '%' del final que se usaba para SQL LIKE
+        let clean_prefix = prefix.trim_end_matches('%');
+        doc! { "last_geohash": { "$regex": format!("^{}", clean_prefix) } }
     }).collect();
+
+    let filter = doc! { "$or": or_conditions };
+    let collection = state.mongo_service.pets_collection();
+
+    let mut cursor = match collection.find(filter).await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Error consultando MongoDB: {:?}", e);
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Error interno del servidor"}))).into_response());
+        }
+    };
+
+    let mut response: Vec<PetDetailResponse> = Vec::new();
+    while let Some(result) = cursor.next().await {
+        match result {
+            Ok(doc) => {
+                if let Ok(pet_detail) = from_document::<PetDetailResponse>(doc) {
+                    response.push(pet_detail);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Error iterando cursor de MongoDB: {:?}", e);
+            }
+        }
+    }
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }

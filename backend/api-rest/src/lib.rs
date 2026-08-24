@@ -10,6 +10,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 pub mod db;
 pub mod docs;
+pub mod error;
 pub mod handlers;
 pub mod infrastructure;
 pub mod models;
