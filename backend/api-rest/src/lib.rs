@@ -1,4 +1,4 @@
-use axum::{routing::get, Router};
+use axum::{extract::DefaultBodyLimit, routing::get, Router};
 use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Duration;
@@ -87,6 +87,7 @@ pub async fn create_app(
         .route("/health", get(health_check))
         .nest("/api/v1", routes::api_routes())
         .with_state(state)
+        .layer(DefaultBodyLimit::max(20 * 1024 * 1024)) // 20 MB (alineado con nginx.conf)
         .layer(TraceLayer::new_for_http())
         //.layer(cors)
 }

@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pawrescue.data.model.AdFeedItemDto
 import com.pawrescue.data.model.PetRegistration
+import com.pawrescue.ui.components.CampaignBannerCarousel
 
 @Composable
 fun HomeScreen(
@@ -30,7 +32,10 @@ fun HomeScreen(
     onDeleteNotification: (String) -> Unit,
     onToggleNearbyAlerts: () -> Unit,
     nearbyAlertsEnabled: Boolean,
-    isGlassTheme: Boolean = false
+    isGlassTheme: Boolean = false,
+    bannerAds: List<AdFeedItemDto> = emptyList(),
+    onAdImpression: (String) -> Unit = {},
+    onAdClick: (AdFeedItemDto) -> Unit = {}
 ) {
     val totalPets = pets.size
     val petsAtRisk = pets.count { it.status.equals("IN_DANGER", ignoreCase = true) || it.status.contains("riesgo", ignoreCase = true) }
@@ -137,6 +142,15 @@ fun HomeScreen(
                     isGlassTheme = isGlassTheme
                 )
             }
+        }
+
+        if (bannerAds.isNotEmpty()) {
+            CampaignBannerCarousel(
+                ads = bannerAds,
+                onImpression = onAdImpression,
+                onAdClick = onAdClick,
+                isGlassTheme = isGlassTheme
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))

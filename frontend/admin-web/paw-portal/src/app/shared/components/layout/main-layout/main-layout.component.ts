@@ -3,11 +3,12 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '@core/services/auth.service';
+import { AiAssistantDrawerComponent } from '@shared/components/ai-assistant-drawer/ai-assistant-drawer.component';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AiAssistantDrawerComponent],
   template: `
     <div class="main-wrapper">
       <!-- Sidebar -->
@@ -42,9 +43,14 @@ import { AuthService } from '@core/services/auth.service';
             <span class="nav-label" *ngIf="!isSidebarCollapsed">Mascotas</span>
           </a>
 
-          <a class="nav-section-title" routerLink="/shelters" routerLinkActive="active" class="nav-item">
+          <a routerLink="/shelters" routerLinkActive="active" class="nav-item">
             <lucide-icon name="home" class="nav-icon"></lucide-icon>
             <span class="nav-label" *ngIf="!isSidebarCollapsed">Refugios</span>
+          </a>
+
+          <a routerLink="/campaigns" routerLinkActive="active" class="nav-item">
+            <lucide-icon name="megaphone" class="nav-icon"></lucide-icon>
+            <span class="nav-label" *ngIf="!isSidebarCollapsed">Campañas y Ads</span>
           </a>
 
           <a routerLink="/users" routerLinkActive="active" class="nav-item">
@@ -106,6 +112,9 @@ import { AuthService } from '@core/services/auth.service';
           </div>
         </footer>
       </main>
+
+      <!-- Copiloto IA flotante disponible en todo el portal -->
+      <app-ai-assistant-drawer></app-ai-assistant-drawer>
     </div>
   `,
   styles: [`

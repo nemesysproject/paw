@@ -1,5 +1,5 @@
 # Stage 1: Build — compilación estática con musl
-FROM rust:slim as builder
+FROM rust:1.90-slim AS builder
 WORKDIR /app
 
 # Instalar musl-tools + dependencias necesarias

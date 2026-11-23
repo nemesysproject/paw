@@ -1,11 +1,74 @@
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
-
 }
+
+/**
+ * Detecta automáticamente la IPv4 local (Wi-Fi / LAN) de la PC en tiempo de compilación
+ * para pruebas locales desde dispositivos físicos en la misma red Wi-Fi.
+ * Ignora interfaces virtuales (Docker, WSL, Hyper-V, vEthernet, VMware, VirtualBox).
+ */
+fun detectLocalLanIp(): String {
+  val virtualKeywords = listOf(
+    "vethernet", "docker", "wsl", "vmware", "virtualbox", "vbox",
+    "hyper-v", "loopback", "tailscale", "zerotier", "tun", "tap", "br-"
+  )
+  val preferredKeywords = listOf("wi-fi", "wifi", "wlan", "wireless", "en0", "ethernet")
+
+  val candidates = mutableListOf<Pair<Int, String>>()
+  try {
+    val interfaces = NetworkInterface.getNetworkInterfaces()
+    while (interfaces.hasMoreElements()) {
+      val iface = interfaces.nextElement()
+      if (!iface.isUp || iface.isLoopback || iface.isVirtual) continue
+      val label = "${iface.name} ${iface.displayName}".lowercase()
+      if (virtualKeywords.any { label.contains(it) }) continue
+
+      val addresses = iface.inetAddresses
+      while (addresses.hasMoreElements()) {
+        val addr = addresses.nextElement()
+        if (addr is Inet4Address && addr.isSiteLocalAddress && !addr.isLoopbackAddress) {
+          val ip = addr.hostAddress ?: continue
+          val priority = if (preferredKeywords.any { label.contains(it) }) 0 else 1
+          candidates.add(priority to ip)
+        }
+      }
+    }
+  } catch (_: Exception) {
+    // Fallback abajo
+  }
+
+  return candidates.minByOrNull { it.first }?.second ?: "10.0.2.2"
+}
+
+fun resolveReleaseBaseUrl(): String {
+  val envUrl = System.getenv("PROD_BASE_URL")?.trim()
+  if (!envUrl.isNullOrBlank()) return if (envUrl.endsWith("/")) envUrl else "$envUrl/"
+
+  val props = Properties()
+  listOf(".env", ".env.pawrescue").forEach { fileName ->
+    val f = rootProject.file(fileName)
+    if (f.exists()) f.inputStream().use { props.load(it) }
+  }
+  val propUrl = props.getProperty("PROD_BASE_URL")
+    ?: props.getProperty("BASE_URL")
+    ?: "https://api.tudominio.com/"
+  val clean = propUrl.trim().trim('"').trim('\'')
+  return if (clean.endsWith("/")) clean else "$clean/"
+}
+
+val debugBaseUrl: String = (System.getenv("LOCAL_API_URL")?.trim()?.takeIf { it.isNotBlank() }
+  ?: "http://${detectLocalLanIp()}/").let { if (it.endsWith("/")) it else "$it/" }
+val releaseBaseUrl: String = resolveReleaseBaseUrl()
+
+println("[Huellitas Safe] Debug BASE_URL auto-detectada: $debugBaseUrl")
 
 kotlin {
   jvmToolchain(21)
@@ -43,12 +106,14 @@ android {
     release {
       isCrunchPngs = false
       isMinifyEnabled = true
+      buildConfigField("String", "BASE_URL", "\"$releaseBaseUrl\"")
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfigs.findByName("release")?.let {
         signingConfig = it
       }
     }
     debug {
+      buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
     }
   }
   compileOptions {
@@ -67,6 +132,9 @@ android {
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.pawrescue"
+  // BASE_URL se gestiona dinámicamente por buildType (IP Wi-Fi automática en debug, HTTPS en release)
+  ignoreList.add("BASE_URL")
+  ignoreList.add("PROD_BASE_URL")
 }
 
 // Some unused dependencies are commented out below instead of being removed.

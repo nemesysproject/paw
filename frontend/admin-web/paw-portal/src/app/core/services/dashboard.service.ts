@@ -5,8 +5,10 @@ import { Observable } from 'rxjs';
 
 export interface DashboardStats {
   total_lost: number;
-  total_found: number;
-  total_adopted: number;
+  total_adoption: number;
+  total_street: number;
+  total_at_risk: number;
+  total_safe: number;
   total_pets: number;
 }
 

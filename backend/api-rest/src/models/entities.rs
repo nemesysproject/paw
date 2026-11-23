@@ -108,9 +108,14 @@ pub struct Veterinary {
     pub name: String,
     pub address: String,
     pub phone: Option<String>,
+    pub whatsapp: Option<String>,
     pub email: Option<String>,
+    pub website: Option<String>,
+    pub is_verified: bool,
+    pub is_featured: bool,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub geohash: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -119,4 +124,79 @@ pub struct Veterinary {
 pub struct MediaTypeEntity {
     pub id: String,
     pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct AdCategoryEntity {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct AdPlacementEntity {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct AdEventTypeEntity {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct Advertiser {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub contact_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub whatsapp: Option<String>,
+    pub website: Option<String>,
+    pub logo_url: Option<String>,
+    pub logo_public_id: Option<String>,
+    pub is_government: bool,
+    pub official_source_url: Option<String>,
+    pub veterinary_id: Option<String>,
+    pub is_active: bool,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct AdCampaign {
+    pub id: String,
+    pub advertiser_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub cta_label: String,
+    pub target_url: Option<String>,
+    pub image_url: String,
+    pub image_public_id: String,
+    pub category: String,
+    pub placement: String,
+    pub badge_label: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub geohash: Option<String>,
+    pub radius_km: Option<f64>,
+    pub priority: i32,
+    pub starts_at: NaiveDateTime,
+    pub ends_at: NaiveDateTime,
+    pub is_active: bool,
+    pub impressions_count: i64,
+    pub clicks_count: i64,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct AdMetricEvent {
+    pub id: String,
+    pub campaign_id: String,
+    pub event_type: String,
+    pub user_id: Option<String>,
+    pub geohash: Option<String>,
+    pub created_at: NaiveDateTime,
 }

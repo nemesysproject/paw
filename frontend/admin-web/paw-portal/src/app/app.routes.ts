@@ -21,6 +21,7 @@ export const routes: Routes = [
       { path: 'pets/:id/edit', component: EditPetComponent },
       { path: 'config', loadComponent: () => import('./features/config/config').then(m => m.Config) },
       { path: 'shelters', loadComponent: () => import('./features/shelters/shelters').then(m => m.Shelters) },
+      { path: 'campaigns', loadComponent: () => import('./features/campaigns/campaigns.component').then(m => m.CampaignsComponent) },
       { path: 'users', loadComponent: () => import('./features/users/users').then(m => m.Users) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

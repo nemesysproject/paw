@@ -1,11 +1,13 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '@core/services/auth.service';
+import { environment } from '@env/environment';
 import { catchError, throwError, switchMap } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const token = authService.getAccessToken();
+  const isApiRequest = req.url.startsWith(environment.apiUrl);
+  const token = isApiRequest ? authService.getAccessToken() : null;
 
   let authReq = req;
   if (token) {
@@ -18,7 +20,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !req.url.includes('/auth/refresh')) {
+      if (
+        isApiRequest &&
+        error.status === 401 &&
+        !req.url.includes('/auth/refresh') &&
+        !req.url.includes('/auth/login')
+      ) {
         return authService.refreshToken().pipe(
           switchMap((res) => {
             const newAuthReq = req.clone({

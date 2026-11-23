@@ -92,6 +92,12 @@ class PetViewModel(
     private val _remotePets = MutableStateFlow<List<PetDetailResponse>>(emptyList())
     val remotePets: StateFlow<List<PetDetailResponse>> = _remotePets.asStateFlow()
 
+    // --- ADS & CAMPAIGNS STATE ---
+    val activeAds: StateFlow<List<AdFeedItemDto>> = repository.activeAds
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val recordedImpressions = mutableSetOf<String>()
+
     // --- FORM TEMPORARY FIELDS ---
     private val _formPhotos = MutableStateFlow<List<String>>(emptyList())
     val formPhotos: StateFlow<List<String>> = _formPhotos.asStateFlow()
@@ -103,6 +109,8 @@ class PetViewModel(
         if (_isLoggedIn.value) {
             loadCatalogs()
             fetchRemotePets()
+            loadAds()
+            triggerSync()
         }
     }
 
@@ -123,6 +131,7 @@ class PetViewModel(
             triggerSync()
             loadCatalogs()
             fetchRemotePets()
+            loadAds()
         }
     }
 
@@ -180,6 +189,8 @@ class PetViewModel(
                         _isAuthenticated.value = true // Bypass biometric on login
                         loadCatalogs()
                         fetchRemotePets()
+                        loadAds()
+                        triggerSync()
                         onSuccess()
                     } else {
                         _authError.value = "Error al recibir el token de acceso."
@@ -258,6 +269,8 @@ class PetViewModel(
             _isAuthenticated.value = true
             loadCatalogs()
             fetchRemotePets()
+            loadAds()
+            triggerSync()
         }
     }
 
@@ -283,6 +296,40 @@ class PetViewModel(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    // --- ADS & CAMPAIGNS LOADER & METRICS ---
+    fun loadAds(lat: Double? = null, lon: Double? = null) {
+        if (!_isOnline.value) return
+        viewModelScope.launch {
+            repository.syncAds(lat = lat, lon = lon)
+        }
+    }
+
+    fun trackAdImpression(campaignId: String, lat: Double? = null, lon: Double? = null) {
+        if (!_isOnline.value || !recordedImpressions.add(campaignId)) return
+        viewModelScope.launch {
+            repository.recordAdEvent(
+                campaignId = campaignId,
+                eventType = "IMPRESSION",
+                userId = currentUserId,
+                lat = lat,
+                lon = lon
+            )
+        }
+    }
+
+    fun trackAdClick(campaignId: String, lat: Double? = null, lon: Double? = null) {
+        if (!_isOnline.value) return
+        viewModelScope.launch {
+            repository.recordAdEvent(
+                campaignId = campaignId,
+                eventType = "CLICK",
+                userId = currentUserId,
+                lat = lat,
+                lon = lon
+            )
         }
     }
 

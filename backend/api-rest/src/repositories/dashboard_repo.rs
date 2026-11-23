@@ -35,7 +35,7 @@ impl DashboardRepository {
             r#"
             SELECT 
                 p.id, p.name, p.status, p."lastLatitude" as last_latitude, p."lastLongitude" as last_longitude,
-                (SELECT url FROM "Media" WHERE pet_id = p.id LIMIT 1) as image_url
+                (SELECT url FROM "Media" WHERE "petId" = p.id LIMIT 1) as image_url
             FROM "Pet" p
             WHERE p."lastLatitude" IS NOT NULL AND p."lastLongitude" IS NOT NULL
             "#

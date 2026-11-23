@@ -66,4 +66,21 @@ interface ApiService {
 
     @GET("api/v1/catalogs/statuses")
     suspend fun getStatuses(): Response<List<StatusDto>>
+
+    // --- ADS & CAMPAIGNS ---
+    @GET("api/v1/ads")
+    suspend fun getActiveAds(
+        @Query("placement") placement: String? = null,
+        @Query("category") category: String? = null,
+        @Query("lat") lat: Double? = null,
+        @Query("lon") lon: Double? = null,
+        @Query("radius_km") radiusKm: Double? = null,
+        @Query("limit") limit: Int? = 15
+    ): Response<List<AdFeedItemDto>>
+
+    @POST("api/v1/ads/{id}/events")
+    suspend fun recordAdEvent(
+        @Path("id") campaignId: String,
+        @Body request: RecordAdEventRequest
+    ): Response<ResponseBody>
 }

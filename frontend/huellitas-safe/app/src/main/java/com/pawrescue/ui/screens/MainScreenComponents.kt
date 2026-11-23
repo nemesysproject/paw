@@ -3,7 +3,7 @@ package com.pawrescue.ui.screens
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,7 +25,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.pawrescue.data.model.AdFeedItemDto
 import com.pawrescue.data.model.PetRegistration
+import com.pawrescue.ui.components.SponsoredAdCard
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -34,10 +36,13 @@ fun SocialFeedLayout(
     isSyncing: Boolean,
     onPetClicked: (PetRegistration) -> Unit,
     onShareRequested: (PetRegistration) -> Unit,
-    onManualSyncRequested: () -> Unit
+    onManualSyncRequested: () -> Unit,
+    feedAds: List<AdFeedItemDto> = emptyList(),
+    onAdImpression: (String) -> Unit = {},
+    onAdClick: (AdFeedItemDto) -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        if (registrations.isEmpty()) {
+        if (registrations.isEmpty() && feedAds.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -61,12 +66,33 @@ fun SocialFeedLayout(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(registrations, key = { it.remoteId ?: it.id }) { pet ->
+                itemsIndexed(registrations, key = { _, pet -> pet.remoteId ?: pet.id }) { index, pet ->
                     SocialPetCard(
                         pet = pet, 
                         onClicked = { onPetClicked(pet) },
                         onShare = { onShareRequested(pet) }
                     )
+
+                    // Intercalar 1 tarjeta patrocinada cada 4 reportes
+                    if (feedAds.isNotEmpty() && (index + 1) % 4 == 0) {
+                        val ad = feedAds[((index + 1) / 4 - 1) % feedAds.size]
+                        SponsoredAdCard(
+                            ad = ad,
+                            onImpression = onAdImpression,
+                            onAdClick = onAdClick
+                        )
+                    }
+                }
+
+                // Si hay menos de 4 reportes, mostrar al menos el anuncio prioritario al final
+                if (feedAds.isNotEmpty() && registrations.size < 4) {
+                    item(key = "ad_tail_${feedAds.first().id}") {
+                        SponsoredAdCard(
+                            ad = feedAds.first(),
+                            onImpression = onAdImpression,
+                            onAdClick = onAdClick
+                        )
+                    }
                 }
             }
         }

@@ -88,3 +88,36 @@ data class PetDetailResponse(
     @Json(name = "last_geohash") val lastGeohash: String? = null,
     val media: List<MediaDto>
 )
+
+@Entity(tableName = "ad_campaigns")
+@JsonClass(generateAdapter = true)
+data class AdFeedItemDto(
+    @PrimaryKey val id: String,
+    @Json(name = "advertiser_id") val advertiserId: String,
+    @Json(name = "advertiser_name") val advertiserName: String,
+    @Json(name = "advertiser_logo_url") val advertiserLogoUrl: String? = null,
+    @Json(name = "is_government") val isGovernment: Boolean = false,
+    @Json(name = "official_source_url") val officialSourceUrl: String? = null,
+    val title: String,
+    val description: String? = null,
+    @Json(name = "cta_label") val ctaLabel: String = "Ver más",
+    @Json(name = "target_url") val targetUrl: String? = null,
+    @Json(name = "image_url") val imageUrl: String,
+    val category: String,
+    val placement: String,
+    @Json(name = "badge_label") val badgeLabel: String = "Patrocinado",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    @Json(name = "radius_km") val radiusKm: Double? = null,
+    val priority: Int = 0,
+    @Json(name = "starts_at") val startsAt: String,
+    @Json(name = "ends_at") val endsAt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class RecordAdEventRequest(
+    @Json(name = "event_type") val eventType: String,
+    @Json(name = "user_id") val userId: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
+)

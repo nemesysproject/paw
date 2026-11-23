@@ -6,11 +6,24 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.pawrescue.data.model.*
 
-@Database(entities = [PetRegistration::class, AppTheme::class, SpeciesDto::class, BreedDto::class, GenderDto::class, StatusDto::class], version = 5, exportSchema = false)
+@Database(
+    entities = [
+        PetRegistration::class,
+        AppTheme::class,
+        SpeciesDto::class,
+        BreedDto::class,
+        GenderDto::class,
+        StatusDto::class,
+        AdFeedItemDto::class
+    ],
+    version = 6,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun petRegistrationDao(): PetRegistrationDao
     abstract fun themeDao(): ThemeDao
     abstract fun catalogDao(): CatalogDao
+    abstract fun adDao(): AdDao
 
     companion object {
         @Volatile

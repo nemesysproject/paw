@@ -42,7 +42,13 @@ pub async fn create_pet(
         let name = field.name().unwrap_or_default().to_string();
         if name == "file" {
             let file_name = field.file_name().unwrap_or("image.jpg").to_string();
-            let data = field.bytes().await.unwrap_or_default().to_vec();
+            let data = match field.bytes().await {
+                Ok(b) => b.to_vec(),
+                Err(e) => {
+                    tracing::error!("Error leyendo bytes de archivo '{}': {:?}", file_name, e);
+                    return Err((StatusCode::PAYLOAD_TOO_LARGE, Json(json!({"error": format!("Error leyendo archivo '{}': {}", file_name, e)}))).into_response());
+                }
+            };
             files.push((data, file_name));
         } else {
             let text = field.text().await.unwrap_or_default();

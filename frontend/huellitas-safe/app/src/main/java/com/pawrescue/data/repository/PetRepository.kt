@@ -1,9 +1,11 @@
 package com.pawrescue.data.repository
 
 import com.pawrescue.data.api.ApiService
+import com.pawrescue.data.local.AdDao
 import com.pawrescue.data.local.PetRegistrationDao
 import com.pawrescue.data.model.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -16,7 +18,8 @@ class PetRepository(
     private val dao: PetRegistrationDao,
     private val themeDao: com.pawrescue.data.local.ThemeDao,
     private val catalogDao: com.pawrescue.data.local.CatalogDao,
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val adDao: AdDao? = null
 ) {
 
     val allRegistrations: Flow<List<PetRegistration>> = dao.getAllRegistrationsFlow()
@@ -26,6 +29,7 @@ class PetRepository(
     val gendersCatalog: Flow<List<GenderDto>> = catalogDao.getAllGendersFlow()
     val statusesCatalog: Flow<List<StatusDto>> = catalogDao.getAllStatusesFlow()
     val allBreedsCatalog: Flow<List<BreedDto>> = catalogDao.getAllBreedsFlow()
+    val activeAds: Flow<List<AdFeedItemDto>> = adDao?.getAllAdsFlow() ?: emptyFlow()
 
     fun getBreedsBySpecies(speciesId: String): Flow<List<BreedDto>> = catalogDao.getBreedsBySpeciesFlow(speciesId)
 
@@ -114,25 +118,36 @@ class PetRepository(
                 fields["name"] = toRequestBody(pet.name)
                 fields["description"] = toRequestBody(pet.description)
                 
-                // Rust seeder default IDs
-                // Perro default ID: 5fd52847-6b3b-5cc5-aa38-0849117cb69a
-                // Gato default ID: cf8bc1e1-43c2-5bf0-a8fb-1eea7221dcc3
-                val isGato = pet.description.contains("gato", ignoreCase = true) || 
-                             pet.name.contains("gato", ignoreCase = true)
-                val speciesId = if (isGato) "cf8bc1e1-43c2-5bf0-a8fb-1eea7221dcc3" else "5fd52847-6b3b-5cc5-aa38-0849117cb69a"
-                
-                // Mapear el género y el estado
-                val isMacho = pet.description.contains("macho", ignoreCase = true) || 
-                              pet.description.contains("perrito", ignoreCase = true)
-                val gender = if (isMacho) "MACHO" else "HEMBRA"
-                
-                // Mapear estado
-                val isLost = pet.description.contains("perdido", ignoreCase = true)
-                val status = if (isLost) "LOST" else "FOUND"
+                // Usar los catálogos reales guardados en Room (con normalización defensiva para registros antiguos)
+                val defaultDogSpeciesId = "5fd52847-6b3b-5cc5-aa38-0849117cb69a"
+                val defaultCatSpeciesId = "cf8bc1e1-43c2-5bf0-a8fb-1eea7221dcc3"
+                val speciesId = pet.speciesId?.takeIf { it.isNotBlank() } ?: run {
+                    val isGato = pet.description.contains("gato", ignoreCase = true) ||
+                        pet.name.contains("gato", ignoreCase = true)
+                    if (isGato) defaultCatSpeciesId else defaultDogSpeciesId
+                }
+
+                val gender = when (pet.gender?.trim()?.uppercase()) {
+                    "MALE", "MACHO" -> "MALE"
+                    "FEMALE", "HEMBRA" -> "FEMALE"
+                    else -> "UNKNOWN"
+                }
+
+                val status = when (pet.status?.trim()?.uppercase()) {
+                    "LOST", "PERDIDO", "PERDIDA" -> "LOST"
+                    "ADOPTION", "ADOPCIÓN", "ADOPCION" -> "ADOPTION"
+                    "STREET", "CALLE" -> "STREET"
+                    "AT_RISK", "IN_DANGER", "EN RIESGO" -> "AT_RISK"
+                    "SAFE", "FOUND", "A SALVO", "ENCONTRADO" -> "SAFE"
+                    else -> "LOST"
+                }
 
                 fields["gender"] = toRequestBody(gender)
                 fields["status"] = toRequestBody(status)
                 fields["species_id"] = toRequestBody(speciesId)
+                if (!pet.breedId.isNullOrBlank()) {
+                    fields["breed_id"] = toRequestBody(pet.breedId)
+                }
                 fields["reporter_id"] = toRequestBody(reporterId.ifBlank { "admin-id" })
                 fields["last_latitude"] = toRequestBody(pet.latitude.toString())
                 fields["last_longitude"] = toRequestBody(pet.longitude.toString())
@@ -307,5 +322,54 @@ class PetRepository(
     // --- THEME ---
     suspend fun setTheme(themeName: String) {
         themeDao.setTheme(AppTheme(themeName = themeName))
+    }
+
+    // --- ADS & CAMPAIGNS ---
+    suspend fun syncAds(
+        lat: Double? = null,
+        lon: Double? = null,
+        radiusKm: Double? = 15.0,
+        limit: Int = 20
+    ): List<AdFeedItemDto> {
+        return try {
+            val response = apiService.getActiveAds(
+                lat = lat,
+                lon = lon,
+                radiusKm = radiusKm,
+                limit = limit
+            )
+            if (response.isSuccessful) {
+                val ads = response.body() ?: emptyList()
+                adDao?.replaceAllAds(ads)
+                ads
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun recordAdEvent(
+        campaignId: String,
+        eventType: String,
+        userId: String? = null,
+        lat: Double? = null,
+        lon: Double? = null
+    ) {
+        try {
+            apiService.recordAdEvent(
+                campaignId = campaignId,
+                request = RecordAdEventRequest(
+                    eventType = eventType,
+                    userId = userId,
+                    latitude = lat,
+                    longitude = lon
+                )
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

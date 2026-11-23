@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.pawrescue.data.model.AdFeedItemDto
 import com.pawrescue.data.model.PetRegistration
 import com.pawrescue.ui.components.AddPetDialog
 import com.pawrescue.ui.components.PetDetailDialog
@@ -35,8 +37,10 @@ import com.pawrescue.utils.BiometricHelper
 @Composable
 fun MainScreen(viewModel: PetViewModel) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val registrations by viewModel.registrations.collectAsStateWithLifecycle()
     val remotePets by viewModel.remotePets.collectAsStateWithLifecycle()
+    val activeAds by viewModel.activeAds.collectAsStateWithLifecycle()
     val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val isAuthenticated by viewModel.isAuthenticated.collectAsStateWithLifecycle()
@@ -100,8 +104,33 @@ fun MainScreen(viewModel: PetViewModel) {
         }
     }
 
+    val bannerAds = remember(activeAds) {
+        val top = activeAds.filter { it.placement == "BANNER_TOP" || it.isGovernment }
+        top.ifEmpty { activeAds.take(5) }
+    }
+    val feedAds = remember(activeAds) {
+        val feed = activeAds.filter { it.placement == "HOME_FEED" }
+        feed.ifEmpty { activeAds }
+    }
+    val handleAdClick: (AdFeedItemDto) -> Unit = { ad ->
+        viewModel.trackAdClick(ad.id)
+        val destination = ad.targetUrl?.takeIf { it.isNotBlank() }
+            ?: ad.officialSourceUrl?.takeIf { it.isNotBlank() }
+        if (!destination.isNullOrBlank()) {
+            try {
+                uriHandler.openUri(destination)
+            } catch (e: Exception) {
+                Toast.makeText(context, "No se pudo abrir el enlace", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     LaunchedEffect(isLoggedIn, isAuthenticated) {
-        if (isLoggedIn && !isAuthenticated) triggerBiometricAuth()
+        if (isLoggedIn && !isAuthenticated) {
+            triggerBiometricAuth()
+        } else if (isLoggedIn && isAuthenticated) {
+            viewModel.loadAds()
+        }
     }
 
     if (!isLoggedIn) {
@@ -257,15 +286,27 @@ fun MainScreen(viewModel: PetViewModel) {
 
                 when (currentTab) {
                     "inicio" -> HomeScreen(
-                        unifiedPets, 
-                        notificationList, 
-                        { notificationList = notificationList.map { it.copy(isRead = true) } }, 
-                        { id -> notificationList = notificationList.filter { it.id != id } }, 
-                        { nearbyAlertsEnabled = !nearbyAlertsEnabled }, 
-                        nearbyAlertsEnabled,
-                        isGlassTheme = currentThemeName == "Glass"
+                        pets = unifiedPets,
+                        notifications = notificationList,
+                        onMarkAllRead = { notificationList = notificationList.map { it.copy(isRead = true) } },
+                        onDeleteNotification = { id -> notificationList = notificationList.filter { it.id != id } },
+                        onToggleNearbyAlerts = { nearbyAlertsEnabled = !nearbyAlertsEnabled },
+                        nearbyAlertsEnabled = nearbyAlertsEnabled,
+                        isGlassTheme = currentThemeName == "Glass",
+                        bannerAds = bannerAds,
+                        onAdImpression = { viewModel.trackAdImpression(it) },
+                        onAdClick = handleAdClick
                     )
-                    "feed" -> SocialFeedLayout(unifiedPets, isSyncing, { selectedPetForDetail = it }, { /* share logic */ }, { viewModel.triggerSync() })
+                    "feed" -> SocialFeedLayout(
+                        registrations = unifiedPets,
+                        isSyncing = isSyncing,
+                        onPetClicked = { selectedPetForDetail = it },
+                        onShareRequested = { /* share logic */ },
+                        onManualSyncRequested = { viewModel.triggerSync() },
+                        feedAds = feedAds,
+                        onAdImpression = { viewModel.trackAdImpression(it) },
+                        onAdClick = handleAdClick
+                    )
                     "perfil" -> {
                         val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
                         ProfileLayout(

@@ -99,7 +99,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:alpine
+          image: nginx:1.30.7-alpine
           ports:
             - containerPort: 8080
               hostPort: 8080
