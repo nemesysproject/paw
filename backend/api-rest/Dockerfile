@@ -1,5 +1,4 @@
-
-# Stage 1: Build — compilación estática con musl (sin dependencia de GLIBC)
+# Stage 1: Build — compilación estática con musl
 FROM rust:slim as builder
 WORKDIR /app
 
@@ -8,7 +7,6 @@ RUN apt-get update && apt-get install -y \
     musl-tools \
     pkg-config \
     libssl-dev \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Agregar el target musl para Linux x86_64
@@ -19,25 +17,25 @@ COPY src ./src
 COPY .sqlx ./.sqlx
 COPY migrations ./migrations
 
-# Activar compilación offline para sqlx
+# Activar compilación offline para sqlx (Evita requerir DATABASE_URL en build time)
 ENV SQLX_OFFLINE=true
-ENV SQLX_OFF_DATABASE_DATA=.sqlx
-
-ARG DATABASE_URL
-ENV DATABASE_URL=$DATABASE_URL
 
 # Compilar binario estático en modo release
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
-# Stage 2: Runtime mínimo — no necesita GLIBC
-FROM debian:bookworm-slim
+# Stage 2: Runtime mínimo y seguro
+FROM alpine:3.19
 WORKDIR /app
 
 # Instalar certificados CA para peticiones HTTPS
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates
 
-# Copiar el binario estático compilado
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/api-rest /app/api-rest
+# Crear usuario no root por seguridad
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# Copiar el binario estático compilado con permisos del usuario no root
+COPY --from=builder --chown=appuser:appgroup /app/target/x86_64-unknown-linux-musl/release/api-rest /app/api-rest
 
 EXPOSE 8080
 

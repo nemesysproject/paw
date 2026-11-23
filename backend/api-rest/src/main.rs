@@ -115,9 +115,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. 🌐 Configurar y arrancar servidor Axum
     let app = create_app(pool, rabbit_service, mongo_service).await;
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8081));
     let listener = TcpListener::bind(addr).await.map_err(|e| {
-        tracing::error!("❌ Error bindeando puerto 8080: {}", e);
+        tracing::error!("❌ Error bindeando puerto 8081: {}", e);
         e
     })?;
     
