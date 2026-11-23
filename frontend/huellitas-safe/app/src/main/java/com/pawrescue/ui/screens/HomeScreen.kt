@@ -68,10 +68,10 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isGlassTheme) Color.White.copy(alpha = 0.2f) 
+                    containerColor = if (isGlassTheme) Color.White.copy(alpha = 0.18f)
                     else MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                 ),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                border = BorderStroke(1.dp, Color.White.copy(alpha = if (isGlassTheme) 0.34f else 0.15f))
             ) {
                 Box(
                     modifier = Modifier

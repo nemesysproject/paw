@@ -6,24 +6,24 @@ import androidx.compose.ui.graphics.Color
 
 // --- THEME COLOR SCHEMES ---
 
-// 1. Premium Dark (Default)
+// 1. Glass (Default - Liquid Glass Frosted Style, sincronizado con paw-portal)
+private val GlassColorScheme = darkColorScheme(
+    primary = GlassPrimary,
+    secondary = GlassSecondary,
+    background = GlassGradientBottom,
+    surface = GlassSurface,
+    onPrimary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White
+)
+
+// 2. Premium Dark
 private val PremiumDarkColorScheme = darkColorScheme(
     primary = PremiumGradientStart,
     secondary = PremiumGradientEnd,
     background = PremiumDarkBg,
     surface = PremiumDarkSurface,
     onPrimary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White
-)
-
-// 2. Glass (New - Frosted Glass Style)
-private val GlassColorScheme = darkColorScheme(
-    primary = Color.White,
-    secondary = Color(0xFFB0B0B0),
-    background = Color(0xFF121417), // Very dark base for glass contrast
-    surface = Color(0xFF2A2D35),
-    onPrimary = Color.Black,
     onBackground = Color.White,
     onSurface = Color.White
 )
@@ -41,13 +41,13 @@ private val MidnightColorScheme = darkColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    themeName: String = "Premium Dark",
+    themeName: String = "Glass",
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when (themeName) {
-        "Glass" -> GlassColorScheme
+        "Premium Dark" -> PremiumDarkColorScheme
         "Midnight" -> MidnightColorScheme
-        else -> PremiumDarkColorScheme
+        else -> GlassColorScheme
     }
 
     MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)

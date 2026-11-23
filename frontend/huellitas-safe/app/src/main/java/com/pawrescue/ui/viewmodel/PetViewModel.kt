@@ -29,11 +29,11 @@ class PetViewModel(
         )
 
     val currentTheme: StateFlow<String> = repository.selectedTheme
-        .map { it?.themeName ?: "Premium Dark" }
+        .map { it?.themeName ?: "Glass" }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "Premium Dark"
+            initialValue = "Glass"
         )
 
     // --- NETWORK & ONLINE STATUS ---

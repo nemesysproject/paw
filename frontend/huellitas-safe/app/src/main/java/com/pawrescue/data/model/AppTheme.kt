@@ -6,5 +6,5 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "app_themes")
 data class AppTheme(
     @PrimaryKey val id: Int = 0, // We only store one active theme
-    val themeName: String = "Premium Dark" // "Warm", "Premium Dark", "Midnight"
+    val themeName: String = "Glass" // "Glass" (Default), "Premium Dark", "Midnight"
 )

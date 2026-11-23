@@ -95,21 +95,27 @@ import * as L from 'leaflet';
   `,
   styles: [`
     .stat-card {
-      background: white;
-      border-radius: 8px;
-      transition: transform 0.2s;
+      background: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 22px;
+      padding: 0.5rem 0.9rem;
+      box-shadow: 0 12px 30px rgba(10, 15, 36, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      transition: transform 0.2s ease, background 0.2s ease;
     }
     .stat-card:hover {
-      transform: translateY(-5px);
+      transform: translateY(-4px);
+      background: rgba(255, 255, 255, 0.24);
     }
-    .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
-    .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
-    .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
-    .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
-    .border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
-    .text-xs { font-size: .7rem; }
-    .text-gray-300 { color: #dddfeb !important; }
-    .text-gray-800 { color: #5a5c69 !important; }
+    .border-left-primary { border-left: 4px solid rgba(165, 180, 252, 0.9) !important; }
+    .border-left-success { border-left: 4px solid rgba(110, 231, 183, 0.9) !important; }
+    .border-left-info { border-left: 4px solid rgba(125, 211, 252, 0.9) !important; }
+    .border-left-warning { border-left: 4px solid rgba(253, 224, 71, 0.9) !important; }
+    .border-left-danger { border-left: 4px solid rgba(252, 165, 165, 0.95) !important; }
+    .text-xs { font-size: .72rem; letter-spacing: 0.8px; color: rgba(255, 255, 255, 0.85) !important; }
+    .text-gray-300 { color: rgba(255, 255, 255, 0.55) !important; }
+    .text-gray-800 { color: #ffffff !important; font-size: 1.75rem; font-weight: 800; }
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy {

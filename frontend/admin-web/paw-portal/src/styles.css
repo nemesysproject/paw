@@ -1,48 +1,201 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 @import "leaflet/dist/leaflet.css";
 
-/* --- Design Tokens (Premium Palette) --- */
+/* --- Liquid Glass Theme Tokens (inspirado en frosted lavender-navy glass) --- */
 :root {
-  --paw-primary: #6366f1;
-  --paw-primary-dark: #4f46e5;
-  --paw-secondary: #f43f5e;
-  --paw-bg-main: #f8fafc;
-  --paw-sidebar-bg: #1e293b;
-  --paw-sidebar-text: #94a3b8;
-  --paw-sidebar-active: #ffffff;
-  --paw-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --paw-radius: 12px;
+  --paw-primary: #818cf8;
+  --paw-primary-dark: #6366f1;
+  --paw-secondary: #a5b4fc;
+  --paw-glass-bg: rgba(255, 255, 255, 0.14);
+  --paw-glass-bg-strong: rgba(255, 255, 255, 0.22);
+  --paw-glass-bg-dark: rgba(15, 23, 48, 0.45);
+  --paw-glass-border: rgba(255, 255, 255, 0.32);
+  --paw-glass-border-soft: rgba(255, 255, 255, 0.18);
+  --paw-glass-shadow: 0 12px 36px rgba(8, 13, 35, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  --paw-text-primary: #ffffff;
+  --paw-text-secondary: rgba(255, 255, 255, 0.76);
+  --paw-text-muted: rgba(255, 255, 255, 0.62);
+  --paw-radius: 22px;
 }
 
-/* --- Global Reset & Base --- */
+/* --- Global Canvas (Gradiente periwinkle luminoso -> azul noche profundo) --- */
+html,
 body {
-  background-color: var(--paw-bg-main);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  color: #334155;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--paw-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(226, 232, 255, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 84% 22%, rgba(165, 180, 252, 0.38) 0%, transparent 48%),
+    radial-gradient(circle at 50% 92%, rgba(15, 23, 62, 0.85) 0%, transparent 60%),
+    linear-gradient(180deg, #b9c3ec 0%, #8a95cc 32%, #4a558c 65%, #0c1229 100%);
+  background-attachment: fixed;
 }
 
-/* --- Custom Bootstrap Overrides --- */
+/* --- Utilidades Glass globales sobre Bootstrap --- */
+.card,
+.modal-content {
+  background: var(--paw-glass-bg) !important;
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--paw-glass-border) !important;
+  border-radius: var(--paw-radius) !important;
+  box-shadow: var(--paw-glass-shadow) !important;
+  color: var(--paw-text-primary) !important;
+}
+
+.card-header,
+.card-footer,
+.modal-header,
+.modal-footer {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--paw-glass-border-soft) !important;
+  color: var(--paw-text-primary) !important;
+}
+
+/* Overrides de fondos blancos utilitarios de Bootstrap */
+.bg-white,
+.bg-light {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--paw-text-primary) !important;
+}
+
+.text-dark,
+.text-gray-800,
+h1, h2, h3, h4, h5, h6 {
+  color: var(--paw-text-primary) !important;
+}
+
+.text-muted,
+.text-secondary {
+  color: var(--paw-text-muted) !important;
+}
+
+/* --- Tablas estilo Glass --- */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: #ffffff;
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.1);
+  --bs-table-hover-color: #ffffff;
+  --bs-table-border-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.table thead,
+.table-light {
+  --bs-table-bg: rgba(255, 255, 255, 0.1);
+  --bs-table-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* --- Formularios Glass --- */
+.form-control,
+.form-select {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 14px !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(12px);
+}
+
+.form-control::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.form-select option {
+  background: #1b2447;
+  color: #ffffff;
+}
+
+.form-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* --- Tabs Glass --- */
+.nav-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.nav-tabs .nav-link {
+  color: rgba(255, 255, 255, 0.75) !important;
+  border-radius: 14px 14px 0 0 !important;
+  border: 1px solid transparent !important;
+}
+
+.nav-tabs .nav-link.active {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.35) transparent !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+/* --- Botones Glass --- */
 .btn-primary {
-  background-color: var(--paw-primary);
-  border-color: var(--paw-primary);
-  border-radius: 8px;
-  padding: 0.6rem 1.2rem;
-  font-weight: 500;
+  background: rgba(255, 255, 255, 0.24) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  color: #ffffff !important;
+  border-radius: 14px !important;
+  padding: 0.55rem 1.2rem;
+  font-weight: 600;
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 18px rgba(10, 15, 36, 0.22);
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  background-color: var(--paw-primary-dark);
-  border-color: var(--paw-primary-dark);
+  background: rgba(255, 255, 255, 0.34) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-.card {
-  border: none;
-  border-radius: var(--paw-radius);
-  box-shadow: var(--paw-card-shadow);
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-light {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.32) !important;
+  color: #ffffff !important;
+  border-radius: 14px !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.btn-light:hover {
+  background: rgba(255, 255, 255, 0.24) !important;
+  color: #ffffff !important;
+}
+
+.btn-outline-danger {
+  background: rgba(244, 63, 94, 0.16) !important;
+  border: 1px solid rgba(251, 113, 133, 0.45) !important;
+  color: #ffe4e6 !important;
+  border-radius: 12px !important;
+}
+
+.btn-outline-danger:hover {
+  background: rgba(244, 63, 94, 0.35) !important;
+  color: #ffffff !important;
+}
+
+/* --- Badges y Alertas Glass --- */
+.alert {
+  backdrop-filter: blur(18px);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+.leaflet-container {
+  border-radius: 0 0 20px 20px;
 }
 
 /* --- Layout Base Styles --- */

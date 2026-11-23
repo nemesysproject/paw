@@ -125,22 +125,26 @@ interface UiChatMessage extends AiChatMessage {
       right: 24px;
       bottom: 24px;
       z-index: 1050;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.45);
       border-radius: 999px;
-      padding: 12px 18px;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      color: #fff;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(22px) saturate(170%);
+      -webkit-backdrop-filter: blur(22px) saturate(170%);
+      box-shadow: 0 10px 28px rgba(10, 15, 36, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      color: #ffffff;
       font-weight: 700;
       font-size: 0.9rem;
       display: flex;
       align-items: center;
       gap: 8px;
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s ease, background 0.2s ease;
     }
 
     .ai-fab:hover {
       transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.32);
     }
 
     .ai-drawer {
@@ -151,9 +155,12 @@ interface UiChatMessage extends AiChatMessage {
       max-width: calc(100vw - 32px);
       height: 540px;
       max-height: calc(100vh - 100px);
-      background: #ffffff;
-      border-radius: 16px;
-      border: 1px solid #e2e8f0;
+      background: rgba(20, 28, 60, 0.58);
+      backdrop-filter: blur(28px) saturate(175%);
+      -webkit-backdrop-filter: blur(28px) saturate(175%);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      box-shadow: 0 18px 44px rgba(8, 12, 32, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -161,7 +168,8 @@ interface UiChatMessage extends AiChatMessage {
     }
 
     .ai-drawer-header {
-      background: linear-gradient(135deg, #1e293b, #4f46e5);
+      background: rgba(255, 255, 255, 0.12);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
       padding: 14px 16px;
       display: flex;
       justify-content: space-between;
@@ -171,8 +179,9 @@ interface UiChatMessage extends AiChatMessage {
     .ai-badge-icon {
       width: 34px;
       height: 34px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.35);
       color: #fff;
       display: flex;
       align-items: center;
@@ -181,8 +190,8 @@ interface UiChatMessage extends AiChatMessage {
 
     .ai-quick-prompts {
       padding: 10px 14px;
-      background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
     }
 
     .quick-chip {
@@ -197,7 +206,7 @@ interface UiChatMessage extends AiChatMessage {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      background: #f8fafc;
+      background: transparent;
     }
 
     .ai-msg-wrapper {
@@ -214,44 +223,47 @@ interface UiChatMessage extends AiChatMessage {
 
     .ai-bubble {
       max-width: 86%;
-      padding: 10px 12px;
-      border-radius: 14px;
+      padding: 10px 13px;
+      border-radius: 16px;
       font-size: 0.85rem;
       line-height: 1.4;
       white-space: pre-wrap;
     }
 
     .user-msg .ai-bubble {
-      background: #4f46e5;
-      color: #fff;
+      background: rgba(129, 140, 248, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      color: #ffffff;
       border-bottom-right-radius: 4px;
     }
 
     .assistant-msg .ai-bubble {
-      background: #ffffff;
-      color: #1e293b;
-      border: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.26);
       border-bottom-left-radius: 4px;
     }
 
     .action-pill {
       font-size: 0.75rem;
       font-weight: 600;
-      color: #4f46e5;
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.18) !important;
+      border: 1px solid rgba(255, 255, 255, 0.35) !important;
       border-radius: 999px;
       padding: 3px 10px;
     }
 
     .provider-tag {
       font-size: 0.65rem;
-      color: #94a3b8;
+      color: rgba(255, 255, 255, 0.65);
       text-align: right;
     }
 
     .ai-input-bar {
       padding: 10px 12px;
-      background: #ffffff;
-      border-top: 1px solid #e2e8f0;
+      background: rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
       display: flex;
       gap: 8px;
     }

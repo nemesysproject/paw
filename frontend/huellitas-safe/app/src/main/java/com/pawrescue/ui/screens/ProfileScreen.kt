@@ -33,7 +33,7 @@ fun ProfileLayout(
     name: String,
     email: String,
     profilePhotoUrl: String? = null,
-    currentTheme: String = "Premium Dark",
+    currentTheme: String = "Glass",
     onThemeChanged: (String) -> Unit,
     onNameChanged: (String) -> Unit,
     onEmailChanged: (String) -> Unit,

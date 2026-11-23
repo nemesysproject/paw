@@ -30,6 +30,10 @@ import com.pawrescue.data.model.AdFeedItemDto
 import com.pawrescue.data.model.PetRegistration
 import com.pawrescue.ui.components.AddPetDialog
 import com.pawrescue.ui.components.PetDetailDialog
+import com.pawrescue.ui.theme.GlassGradientBottom
+import com.pawrescue.ui.theme.GlassGradientMid1
+import com.pawrescue.ui.theme.GlassGradientMid2
+import com.pawrescue.ui.theme.GlassGradientTop
 import com.pawrescue.ui.viewmodel.PetViewModel
 import com.pawrescue.utils.BiometricHelper
 
@@ -159,7 +163,7 @@ fun MainScreen(viewModel: PetViewModel) {
                         IconButton(onClick = { viewModel.setAuthenticated(false) }) { Icon(Icons.Default.Fingerprint, "BIO LOCK", tint = Color.White) }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (currentThemeName == "Glass") Color.White.copy(alpha = 0.05f) else Color.Transparent,
+                        containerColor = if (currentThemeName == "Glass") Color.White.copy(alpha = 0.14f) else Color.Transparent,
                         titleContentColor = Color.White
                     )
                 )
@@ -167,7 +171,7 @@ fun MainScreen(viewModel: PetViewModel) {
             bottomBar = {
                 val currentThemeName by viewModel.currentTheme.collectAsStateWithLifecycle()
                 NavigationBar(
-                    containerColor = if (currentThemeName == "Glass") Color.White.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    containerColor = if (currentThemeName == "Glass") Color(0xFF141B38).copy(alpha = 0.72f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                     tonalElevation = 0.dp
                 ) {
                     NavigationBarItem(
@@ -227,18 +231,36 @@ fun MainScreen(viewModel: PetViewModel) {
                     .fillMaxSize()
             ) {
                 if (currentThemeName == "Glass") {
-                    // Immersive background image like the login screen
-                    AsyncImage(
-                        model = "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=1000&auto=format&fit=crop",
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    // Dark overlay for contrast
+                    // Fondo Liquid Glass: degradado lavanda luminoso -> índigo -> azul noche profundo
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.4f))
+                            .background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to GlassGradientTop,
+                                        0.32f to GlassGradientMid1,
+                                        0.66f to GlassGradientMid2,
+                                        1.0f to GlassGradientBottom
+                                    )
+                                )
+                            )
+                    )
+                    // Brillo ambiental superior estilo cristal líquido
+                    Box(
+                        modifier = Modifier
+                            .size(340.dp)
+                            .offset(x = (-60).dp, y = (-80).dp)
+                            .blur(90.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.42f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
                 } else {
                     Box(
