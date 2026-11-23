@@ -1,0 +1,25 @@
+.campaigns-page {
+  max-width: 1400px;
+}
+
+.kpi-card {
+  transition: transform 0.15s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+}
+
+.thumb-img {
+  width: 68px;
+  height: 44px;
+  object-fit: cover;
+  background-color: #e2e8f0;
+}
+
+.banner-preview {
+  max-height: 160px;
+  max-width: 100%;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}

@@ -1,0 +1,398 @@
+<div class="container-fluid campaigns-page">
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h2 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+        <lucide-icon name="megaphone" class="text-primary"></lucide-icon>
+        Publicidad y Campañas Geolocalizadas
+      </h2>
+      <p class="text-muted mb-0">
+        Administra anuncios de alimento para mascotas, veterinarias, negocios afines y campañas gubernamentales en Huellitas Safe.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary d-flex align-items-center gap-2" (click)="activeTab.set('advertisers'); openCreateAdvertiser()">
+        <lucide-icon name="building-2" [size]="16"></lucide-icon>
+        Nuevo Anunciante
+      </button>
+      <button class="btn btn-primary d-flex align-items-center gap-2" (click)="activeTab.set('campaigns'); openCreateCampaign()">
+        <lucide-icon name="plus" [size]="16"></lucide-icon>
+        Nueva Campaña
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="errorMessage()" class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ errorMessage() }}
+    <button type="button" class="btn-close" (click)="errorMessage.set(null)"></button>
+  </div>
+  <div *ngIf="successMessage()" class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ successMessage() }}
+    <button type="button" class="btn-close" (click)="successMessage.set(null)"></button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100 kpi-card border-start border-primary border-4">
+        <div class="card-body">
+          <div class="text-uppercase small fw-bold text-primary mb-1">Campañas Activas</div>
+          <div class="h3 fw-bold mb-0">{{ activeCampaignsCount() }} <span class="fs-6 text-muted fw-normal">/ {{ totalCampaigns() }}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100 kpi-card border-start border-info border-4">
+        <div class="card-body">
+          <div class="text-uppercase small fw-bold text-info mb-1">Impresiones Totales</div>
+          <div class="h3 fw-bold mb-0">{{ totalImpressions() | number }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100 kpi-card border-start border-success border-4">
+        <div class="card-body">
+          <div class="text-uppercase small fw-bold text-success mb-1">Clics Totales</div>
+          <div class="h3 fw-bold mb-0">{{ totalClicks() | number }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100 kpi-card border-start border-warning border-4">
+        <div class="card-body">
+          <div class="text-uppercase small fw-bold text-warning mb-1">CTR Promedio</div>
+          <div class="h3 fw-bold mb-0">{{ averageCtr() }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab() === 'campaigns'" (click)="activeTab.set('campaigns')">
+        Campañas ({{ campaigns().length }})
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab() === 'advertisers'" (click)="activeTab.set('advertisers')">
+        Anunciantes / Aliados ({{ advertisers().length }})
+      </button>
+    </li>
+  </ul>
+
+  <!-- ==================== TAB: CAMPAIGNS ==================== -->
+  <div *ngIf="activeTab() === 'campaigns'">
+    <!-- Campaign Form -->
+    <div *ngIf="showCampaignForm()" class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">
+          {{ editingCampaignId() ? 'Editar Campaña' : 'Crear Nueva Campaña' }}
+        </h5>
+        <button class="btn btn-sm btn-outline-secondary" (click)="cancelCampaignForm()">Cancelar</button>
+      </div>
+      <div class="card-body">
+        <form [formGroup]="campaignForm" (ngSubmit)="saveCampaign()">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Anunciante *</label>
+              <select class="form-select" formControlName="advertiser_id" [attr.disabled]="editingCampaignId() ? true : null">
+                <option value="">Selecciona un anunciante...</option>
+                <option *ngFor="let adv of advertisers()" [value]="adv.id">
+                  {{ adv.name }} ({{ adv.is_government ? 'Gobierno' : categoryName(adv.category) }})
+                </option>
+              </select>
+              <small *ngIf="advertisers().length === 0" class="text-danger">
+                Primero crea un anunciante en la pestaña "Anunciantes / Aliados".
+              </small>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Título del Anuncio *</label>
+              <input type="text" class="form-control" formControlName="title" placeholder="Ej. 20% OFF en Alimento Premium o Jornada de Vacunación">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea class="form-control" rows="2" formControlName="description" placeholder="Mensaje breve para el usuario de Huellitas Safe..."></textarea>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Categoría *</label>
+              <select class="form-select" formControlName="category">
+                <option *ngFor="let cat of categories()" [value]="cat.id">{{ cat.name }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Ubicación en la App *</label>
+              <select class="form-select" formControlName="placement">
+                <option *ngFor="let p of placements()" [value]="p.id">{{ p.name }}</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Etiqueta visible (Google Play)</label>
+              <input type="text" class="form-control" formControlName="badge_label" placeholder="Patrocinado / Campaña Pública">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Texto del botón (CTA)</label>
+              <input type="text" class="form-control" formControlName="cta_label" placeholder="Ver cupón / Ver ubicación">
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">URL Destino (Web, WhatsApp o Fuente Oficial)</label>
+              <input type="url" class="form-control" formControlName="target_url" placeholder="https://...">
+            </div>
+
+            <!-- Imagen / Cloudinary -->
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">URL de Banner / Imagen *</label>
+              <input type="url" class="form-control" formControlName="image_url" placeholder="Sube una imagen o pega una URL de Cloudinary">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Subir a Cloudinary</label>
+              <input type="file" class="form-control" accept="image/*" (change)="onBannerFileSelected($event)" [disabled]="isUploadingImage()">
+              <small *ngIf="isUploadingImage()" class="text-primary">Subiendo imagen...</small>
+            </div>
+
+            <div class="col-12" *ngIf="campaignForm.value.image_url">
+              <img [src]="campaignForm.value.image_url" alt="Vista previa" class="banner-preview rounded shadow-sm">
+            </div>
+
+            <!-- Segmentación geográfica opcional -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Latitud (Opcional)</label>
+              <input type="number" step="any" class="form-control" formControlName="latitude" placeholder="19.4326">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Longitud (Opcional)</label>
+              <input type="number" step="any" class="form-control" formControlName="longitude" placeholder="-99.1332">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Radio (km)</label>
+              <input type="number" step="0.5" class="form-control" formControlName="radius_km" placeholder="10">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Prioridad</label>
+              <input type="number" class="form-control" formControlName="priority">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Fecha Inicio *</label>
+              <input type="datetime-local" class="form-control" formControlName="starts_at">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Fecha Fin *</label>
+              <input type="datetime-local" class="form-control" formControlName="ends_at">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="campaignActive" formControlName="is_active">
+                <label class="form-check-label fw-semibold" for="campaignActive">Campaña Activa</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-light" (click)="cancelCampaignForm()">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isSaving() || isUploadingImage()">
+              {{ isSaving() ? 'Guardando...' : (editingCampaignId() ? 'Actualizar Campaña' : 'Crear Campaña') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Campaigns Table -->
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Campaña</th>
+              <th>Anunciante</th>
+              <th>Ubicación</th>
+              <th>Vigencia</th>
+              <th class="text-end">Impresiones</th>
+              <th class="text-end">Clics</th>
+              <th class="text-end">CTR</th>
+              <th>Estado</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="isLoading()">
+              <td colspan="9" class="text-center py-4 text-muted">Cargando campañas...</td>
+            </tr>
+            <tr *ngIf="!isLoading() && campaigns().length === 0">
+              <td colspan="9" class="text-center py-4 text-muted">
+                No hay campañas registradas aún. Haz clic en <strong>Nueva Campaña</strong> para comenzar.
+              </td>
+            </tr>
+            <tr *ngFor="let c of campaigns()">
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  <img [src]="c.image_url" [alt]="c.title" class="thumb-img rounded">
+                  <div>
+                    <div class="fw-semibold">{{ c.title }}</div>
+                    <span class="badge bg-light text-dark border small">{{ categoryName(c.category) }}</span>
+                    <span *ngIf="c.geohash" class="badge bg-info-subtle text-info-emphasis ms-1 small">Geo: {{ c.geohash }}</span>
+                    <span *ngIf="!c.geohash" class="badge bg-secondary-subtle text-secondary-emphasis ms-1 small">Global</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="fw-medium">{{ c.advertiser_name }}</div>
+                <span *ngIf="c.is_government" class="badge bg-primary-subtle text-primary small">Gobierno</span>
+              </td>
+              <td class="small">{{ placementName(c.placement) }}</td>
+              <td class="small text-muted">
+                <div>Inicio: {{ c.starts_at | date:'shortDate' }}</div>
+                <div>Fin: {{ c.ends_at | date:'shortDate' }}</div>
+              </td>
+              <td class="text-end fw-semibold">{{ c.impressions_count | number }}</td>
+              <td class="text-end fw-semibold">{{ c.clicks_count | number }}</td>
+              <td class="text-end">
+                <span class="badge bg-success-subtle text-success-emphasis">{{ c.ctr_percentage }}%</span>
+              </td>
+              <td>
+                <span class="badge" [class.bg-success]="c.is_active" [class.bg-secondary]="!c.is_active">
+                  {{ c.is_active ? 'Activa' : 'Inactiva' }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary me-1" title="Editar" (click)="openEditCampaign(c)">
+                  <lucide-icon name="pencil" [size]="14"></lucide-icon>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" title="Eliminar" (click)="deleteCampaign(c)">
+                  <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: ADVERTISERS ==================== -->
+  <div *ngIf="activeTab() === 'advertisers'">
+    <!-- Advertiser Form -->
+    <div *ngIf="showAdvertiserForm()" class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">
+          {{ editingAdvertiserId() ? 'Editar Anunciante' : 'Registrar Nuevo Anunciante' }}
+        </h5>
+        <button class="btn btn-sm btn-outline-secondary" (click)="cancelAdvertiserForm()">Cancelar</button>
+      </div>
+      <div class="card-body">
+        <form [formGroup]="advertiserForm" (ngSubmit)="saveAdvertiser()">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Nombre del Anunciante / Entidad *</label>
+              <input type="text" class="form-control" formControlName="name" placeholder="Ej. Croquetas PawMix, Clínica VetCare, Municipio de...">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Categoría *</label>
+              <select class="form-select" formControlName="category">
+                <option *ngFor="let cat of categories()" [value]="cat.id">{{ cat.name }}</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Contacto</label>
+              <input type="text" class="form-control" formControlName="contact_name">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Correo</label>
+              <input type="email" class="form-control" formControlName="email">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Teléfono / WhatsApp</label>
+              <input type="text" class="form-control" formControlName="whatsapp">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Sitio Web</label>
+              <input type="url" class="form-control" formControlName="website" placeholder="https://...">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Logo URL (Opcional)</label>
+              <input type="url" class="form-control" formControlName="logo_url" placeholder="https://...">
+            </div>
+
+            <div class="col-md-4 d-flex align-items-center">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="isGov" formControlName="is_government">
+                <label class="form-check-label fw-semibold" for="isGov">¿Es campaña gubernamental?</label>
+              </div>
+            </div>
+            <div class="col-md-8" *ngIf="advertiserForm.value.is_government">
+              <label class="form-label fw-semibold text-primary">URL de Fuente Oficial (.gob / Municipio) *</label>
+              <input type="url" class="form-control" formControlName="official_source_url" placeholder="https://salud.gob.mx/...">
+              <small class="text-muted">Requerido por Google Play para evitar rechazos por suplantación gubernamental.</small>
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-light" (click)="cancelAdvertiserForm()">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+              {{ isSaving() ? 'Guardando...' : (editingAdvertiserId() ? 'Actualizar Anunciante' : 'Crear Anunciante') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Advertisers Table -->
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Contacto</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="advertisers().length === 0">
+              <td colspan="6" class="text-center py-4 text-muted">
+                No hay anunciantes registrados.
+              </td>
+            </tr>
+            <tr *ngFor="let adv of advertisers()">
+              <td class="fw-semibold">{{ adv.name }}</td>
+              <td>{{ categoryName(adv.category) }}</td>
+              <td class="small text-muted">
+                <div>{{ adv.email || '-' }}</div>
+                <div>{{ adv.whatsapp || adv.phone || '' }}</div>
+              </td>
+              <td>
+                <span *ngIf="adv.is_government" class="badge bg-primary">Gobierno</span>
+                <span *ngIf="!adv.is_government" class="badge bg-light text-dark border">Comercial / ONG</span>
+              </td>
+              <td>
+                <span class="badge" [class.bg-success]="adv.is_active" [class.bg-secondary]="!adv.is_active">
+                  {{ adv.is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary me-1" title="Editar" (click)="openEditAdvertiser(adv)">
+                  <lucide-icon name="pencil" [size]="14"></lucide-icon>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" title="Eliminar" (click)="deleteAdvertiser(adv)">
+                  <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
