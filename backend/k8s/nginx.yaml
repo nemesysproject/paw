@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    worker_processes auto;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        # Evitar exponer versión de Nginx
+        server_tokens off;
+
+        # Rate Limiting (Protección contra DDoS / Fuerza Bruta)
+        limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
+        # Mapa para validar orígenes permitidos (CORS seguro)
+        # Evita reflejar cualquier origen ciegamente
+        map $http_origin $cors_origin {
+            default "";
+            "~^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$" $http_origin;
+            "~^https?://midominio\.com$" $http_origin;
+        }
+
+        server {
+            listen 8080;
+
+            # Seguridad de subida: Limitar tamaño a 20MB
+            client_max_body_size 20M;
+
+            # Mitigación Slowloris: Reducir los timeouts drásticamente
+            client_body_timeout 10s;
+            client_header_timeout 10s;
+            keepalive_timeout 5s;
+            send_timeout 10s;
+
+            # Security Headers (Defensa en profundidad)
+            add_header X-Frame-Options "DENY";
+            add_header X-Content-Type-Options "nosniff";
+            add_header X-XSS-Protection "1; mode=block";
+
+            location / {
+                # Strip CORS headers from upstream backend to prevent duplication
+                proxy_hide_header Access-Control-Allow-Origin;
+                proxy_hide_header Access-Control-Allow-Methods;
+                proxy_hide_header Access-Control-Allow-Headers;
+                proxy_hide_header Access-Control-Allow-Credentials;
+
+                # Dynamic CORS configuration matching the requesting origin (Seguro mediante map)
+                add_header 'Access-Control-Allow-Origin' $cors_origin always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH' always;
+                add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since' always;
+                add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+                # Handle OPTIONS Preflight natively at Nginx level
+                if ($request_method = 'OPTIONS') {
+                    add_header 'Access-Control-Allow-Origin' $cors_origin always;
+                    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE, PATCH' always;
+                    add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since' always;
+                    add_header 'Access-Control-Allow-Credentials' 'true' always;
+                    add_header 'Access-Control-Max-Age' 1728000;
+                    add_header 'Content-Type' 'text/plain; charset=utf-8';
+                    add_header 'Content-Length' 0;
+                    return 204;
+                }
+
+                # Aplicar Rate Limiting (Permitir ráfagas de hasta 20 peticiones sin delay inmediato)
+                limit_req zone=api_limit burst=20 nodelay;
+
+                # Proxy Pass hacia Axum (Rust Backend)
+                # En Kubernetes, el servicio se llamará api-rest
+                proxy_pass http://api-rest:8081;
+                
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 8080
+              hostPort: 8080
+          volumeMounts:
+            - name: nginx-config-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: nginx-config-volume
+          configMap:
+            name: nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: nginx

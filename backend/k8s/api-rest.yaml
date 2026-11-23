@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-rest
+  labels:
+    app: api-rest
+spec:
+  replicas: 2 # Recomendación: Alta disponibilidad
+  selector:
+    matchLabels:
+      app: api-rest
+  template:
+    metadata:
+      labels:
+        app: api-rest
+    spec:
+      containers:
+        - name: api-rest
+          image: localhost/api-rest:latest # Imagen construida localmente con podman
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              # Quitamos hostPort para que no se exponga directamente, Nginx lo hará
+          env:
+            - name: DATABASE_URL
+              value: "${DATABASE_URL}"
+            - name: RABBITMQ_URI
+              value: "${RABBITMQ_URI}"
+            - name: MONGODB_URI
+              value: "${MONGODB_URI}"
+            - name: MONGODB_DB_NAME
+              value: "${MONGODB_DB_NAME}"
+            - name: CLOUDINARY_CLOUD_NAME
+              value: "${CLOUDINARY_CLOUD_NAME}"
+            - name: CLOUDINARY_API_KEY
+              value: "${CLOUDINARY_API_KEY}"
+            - name: CLOUDINARY_API_SECRET
+              value: "${CLOUDINARY_API_SECRET}"
+            - name: JWT_SECRET
+              value: "${JWT_SECRET}"
+            - name: RUST_LOG
+              value: "info,api_rest=debug"
+          # Security Context para ejecutar como usuario no root (definido en Dockerfile)
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          livenessProbe:
+            httpGet:
+              path: /health # Asumiendo que existe un endpoint de health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-rest
+  labels:
+    app: api-rest
+spec:
+  ports:
+    - port: 8081
+      targetPort: 8081
+  selector:
+    app: api-rest
