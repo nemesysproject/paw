@@ -15,11 +15,24 @@ pub struct UserRole {
 pub struct User {
     pub id: String,
     pub email: String,
-    pub password: String, // En la BD guardaremos el hash, ojo al exponer esto en el DTO final
+    #[serde(skip_serializing)]
+    pub password: Option<String>, // Hash Argon2; None para usuarios creados únicamente con login social
+    pub email_verified: bool,
     pub name: String,
     pub phone: Option<String>,
     pub avatar_url: Option<String>,
     pub role: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct UserIdentity {
+    pub id: String,
+    pub user_id: String,
+    pub provider: String,
+    pub provider_user_id: String,
+    pub email: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }

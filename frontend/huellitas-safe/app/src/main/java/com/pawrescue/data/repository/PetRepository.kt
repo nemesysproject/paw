@@ -45,6 +45,12 @@ class PetRepository(
 
     suspend fun login(email: String, password: String) = apiService.login(LoginRequest(email, password))
 
+    suspend fun socialLogin(provider: String, idToken: String, nonce: String? = null) =
+        apiService.socialLogin(SocialLoginRequest(provider = provider, idToken = idToken, nonce = nonce))
+
+    suspend fun refreshToken(refreshToken: String) =
+        apiService.refreshToken(RefreshRequest(refreshToken))
+
     suspend fun register(name: String, email: String, password: String) = apiService.register(RegisterRequest(email, password, name))
 
     suspend fun insertRegistration(registration: PetRegistration): Long {

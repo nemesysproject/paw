@@ -19,11 +19,26 @@ data class LoginRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class SocialLoginRequest(
+    val provider: String = "GOOGLE",
+    @Json(name = "id_token") val idToken: String,
+    val nonce: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class RefreshRequest(
+    @Json(name = "refresh_token") val refreshToken: String
+)
+
+@JsonClass(generateAdapter = true)
 data class TokenResponse(
     @Json(name = "access_token") val accessToken: String? = null,
     @Json(name = "refresh_token") val refreshToken: String? = null,
     @Json(name = "token_type") val tokenType: String? = null,
     @Json(name = "expires_in") val expiresIn: Long? = null,
+    val email: String? = null,
+    val name: String? = null,
+    @Json(name = "avatar_url") val avatarUrl: String? = null,
     val accessTokenCamel: String? = null, // Fallback common camelCase
     val refreshTokenCamel: String? = null
 )

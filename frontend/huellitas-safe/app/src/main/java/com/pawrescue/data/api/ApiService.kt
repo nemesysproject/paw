@@ -13,11 +13,21 @@ interface ApiService {
     @POST("api/v1/auth/register")
     suspend fun register(
         @Body request: RegisterRequest
-    ): Response<TokenResponse>
+    ): Response<ResponseBody>
 
     @POST("api/v1/auth/login")
     suspend fun login(
         @Body request: LoginRequest
+    ): Response<TokenResponse>
+
+    @POST("api/v1/auth/social")
+    suspend fun socialLogin(
+        @Body request: SocialLoginRequest
+    ): Response<TokenResponse>
+
+    @POST("api/v1/auth/refresh")
+    suspend fun refreshToken(
+        @Body request: RefreshRequest
     ): Response<TokenResponse>
 
     // --- PETS CRUD ---

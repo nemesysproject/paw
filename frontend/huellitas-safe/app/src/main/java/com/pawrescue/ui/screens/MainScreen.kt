@@ -34,6 +34,20 @@ import com.pawrescue.ui.theme.GlassGradientBottom
 import com.pawrescue.ui.theme.GlassGradientMid1
 import com.pawrescue.ui.theme.GlassGradientMid2
 import com.pawrescue.ui.theme.GlassGradientTop
+import com.pawrescue.ui.theme.IceGradientBottom
+import com.pawrescue.ui.theme.IceGradientMid
+import com.pawrescue.ui.theme.IceGradientTop
+import com.pawrescue.ui.theme.IceInk
+import com.pawrescue.ui.theme.IceInkSecondary
+import com.pawrescue.ui.theme.IceTeal
+import com.pawrescue.ui.theme.PremiumGold
+import com.pawrescue.ui.theme.PremiumGradientBottom
+import com.pawrescue.ui.theme.PremiumGradientMid
+import com.pawrescue.ui.theme.PremiumGradientTop
+import com.pawrescue.ui.theme.PremiumObsidian
+import com.pawrescue.ui.theme.PremiumTaupe
+import com.pawrescue.ui.theme.isIceCleanTheme
+import com.pawrescue.ui.theme.isPremiumTheme
 import com.pawrescue.ui.viewmodel.PetViewModel
 import com.pawrescue.utils.BiometricHelper
 import com.pawrescue.utils.LocationHelper
@@ -151,42 +165,75 @@ fun MainScreen(viewModel: PetViewModel) {
             containerColor = Color.Transparent,
             topBar = {
                 val currentThemeName by viewModel.currentTheme.collectAsStateWithLifecycle()
+                val iceActive = isIceCleanTheme(currentThemeName)
+                val barTitleColor = if (iceActive) IceInk else Color.White
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Huellitas Safe", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                            Text("Huellitas Safe", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = barTitleColor)
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.toggleNetwork(!isOnline) }) {
-                                Icon(if (isOnline) Icons.Default.CloudQueue else Icons.Default.CloudOff, null, modifier = Modifier.size(14.dp), tint = if (isOnline) Color(0xFF5F9E81) else Color.Gray)
-                                Text(if (isOnline) "Modo Online" else "Modo Offline", fontSize = 10.sp, color = if (isOnline) Color(0xFF5F9E81) else Color.Gray)
+                                val onlineColor = if (iceActive) IceTeal else Color(0xFF5F9E81)
+                                Icon(if (isOnline) Icons.Default.CloudQueue else Icons.Default.CloudOff, null, modifier = Modifier.size(14.dp), tint = if (isOnline) onlineColor else Color.Gray)
+                                Text(if (isOnline) "Modo Online" else "Modo Offline", fontSize = 10.sp, color = if (isOnline) onlineColor else Color.Gray)
                             }
                         }
                     },
                     actions = {
-                        IconButton(onClick = { viewModel.setAuthenticated(false) }) { Icon(Icons.Default.Fingerprint, "BIO LOCK", tint = Color.White) }
+                        IconButton(onClick = { viewModel.setAuthenticated(false) }) { Icon(Icons.Default.Fingerprint, "BIO LOCK", tint = barTitleColor) }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (currentThemeName == "Glass") Color.White.copy(alpha = 0.14f) else Color.Transparent,
-                        titleContentColor = Color.White
+                        containerColor = when {
+                            currentThemeName == "Glass" -> Color.White.copy(alpha = 0.14f)
+                            isPremiumTheme(currentThemeName) -> Color(0xFF241D17).copy(alpha = 0.55f)
+                            iceActive -> Color.White.copy(alpha = 0.72f)
+                            else -> Color.Transparent
+                        },
+                        titleContentColor = barTitleColor
                     )
                 )
             },
             bottomBar = {
                 val currentThemeName by viewModel.currentTheme.collectAsStateWithLifecycle()
+                val premiumActive = isPremiumTheme(currentThemeName)
+                val iceActive = isIceCleanTheme(currentThemeName)
                 NavigationBar(
-                    containerColor = if (currentThemeName == "Glass") Color(0xFF141B38).copy(alpha = 0.72f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    containerColor = when {
+                        currentThemeName == "Glass" -> Color(0xFF141B38).copy(alpha = 0.72f)
+                        premiumActive -> Color(0xFF14100D).copy(alpha = 0.90f)
+                        iceActive -> Color.White.copy(alpha = 0.94f)
+                        else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    },
                     tonalElevation = 0.dp
                 ) {
+                    val navItemColors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = when {
+                            premiumActive -> PremiumObsidian
+                            iceActive -> Color.White
+                            else -> MaterialTheme.colorScheme.primary
+                        },
+                        selectedTextColor = when {
+                            premiumActive -> PremiumGold
+                            iceActive -> IceInk
+                            else -> MaterialTheme.colorScheme.primary
+                        },
+                        unselectedIconColor = when {
+                            premiumActive -> PremiumTaupe.copy(alpha = 0.85f)
+                            iceActive -> IceInkSecondary
+                            else -> Color.Gray
+                        },
+                        indicatorColor = when {
+                            premiumActive -> Color.White
+                            iceActive -> IceInk
+                            else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        }
+                    )
                     NavigationBarItem(
                         selected = currentTab == "inicio",
                         onClick = { currentTab = "inicio" },
                         icon = { Icon(if (currentTab == "inicio") Icons.Filled.Home else Icons.Outlined.Home, null) },
                         label = if (currentTab == "inicio") { { Text("INICIO") } } else null,
                         alwaysShowLabel = false,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = Color.Gray,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        )
+                        colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = currentTab == "feed",
@@ -194,11 +241,7 @@ fun MainScreen(viewModel: PetViewModel) {
                         icon = { Icon(if (currentTab == "feed") Icons.Filled.Pets else Icons.Outlined.Pets, null) },
                         label = if (currentTab == "feed") { { Text("DESCUBRIR") } } else null,
                         alwaysShowLabel = false,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = Color.Gray,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        )
+                        colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = currentTab == "mensajes",
@@ -206,11 +249,7 @@ fun MainScreen(viewModel: PetViewModel) {
                         icon = { Icon(if (currentTab == "mensajes") Icons.Filled.Chat else Icons.Outlined.Chat, null) },
                         label = if (currentTab == "mensajes") { { Text("MENSAJES") } } else null,
                         alwaysShowLabel = false,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = Color.Gray,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        )
+                        colors = navItemColors
                     )
                     NavigationBarItem(
                         selected = currentTab == "perfil",
@@ -218,21 +257,24 @@ fun MainScreen(viewModel: PetViewModel) {
                         icon = { Icon(if (currentTab == "perfil") Icons.Filled.Person else Icons.Outlined.Person, null) },
                         label = if (currentTab == "perfil") { { Text("MI PERFIL") } } else null,
                         alwaysShowLabel = false,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = Color.Gray,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        )
+                        colors = navItemColors
                     )
                 }
             },
             floatingActionButton = {
+                val currentThemeName by viewModel.currentTheme.collectAsStateWithLifecycle()
+                val premiumActive = isPremiumTheme(currentThemeName)
+                val iceActive = isIceCleanTheme(currentThemeName)
                 ExtendedFloatingActionButton(
                     onClick = { showAddDialog = true },
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Reportar") },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White,
+                    text = { Text("Reportar", fontWeight = FontWeight.SemiBold) },
+                    containerColor = when {
+                        premiumActive -> Color.White
+                        iceActive -> IceInk
+                        else -> MaterialTheme.colorScheme.primary
+                    },
+                    contentColor = if (premiumActive) PremiumObsidian else Color.White,
                     shape = RoundedCornerShape(100.dp)
                 )
             }
@@ -276,6 +318,69 @@ fun MainScreen(viewModel: PetViewModel) {
                                 )
                             )
                     )
+                } else if (isPremiumTheme(currentThemeName)) {
+                    // Fondo Premium Warm Glass: degradado taupe cálido (#AA907A) -> moka ahumado -> obsidiana (#0F0F0F)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to PremiumGradientTop,
+                                        0.38f to PremiumGradientMid,
+                                        0.78f to Color(0xFF1A1410),
+                                        1.0f to PremiumGradientBottom
+                                    )
+                                )
+                            )
+                    )
+                    // Halo cálido ámbar (#FFDA9F) superior
+                    Box(
+                        modifier = Modifier
+                            .size(320.dp)
+                            .offset(x = 80.dp, y = (-60).dp)
+                            .blur(100.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        PremiumGold.copy(alpha = 0.28f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                } else if (isIceCleanTheme(currentThemeName)) {
+                    // Fondo Ice Clean (CleanPro): degradado azul hielo limpio -> neblina glaciar -> blanco escarcha
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to IceGradientTop,
+                                        0.45f to IceGradientMid,
+                                        1.0f to IceGradientBottom
+                                    )
+                                )
+                            )
+                    )
+                    // Brillo suave blanco superior
+                    Box(
+                        modifier = Modifier
+                            .size(300.dp)
+                            .offset(x = (-60).dp, y = (-70).dp)
+                            .blur(90.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.65f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
                 } else {
                     Box(
                         modifier = Modifier
@@ -284,8 +389,8 @@ fun MainScreen(viewModel: PetViewModel) {
                     )
                 }
 
-                // Background blurred circles logic
-                if (currentThemeName != "Glass") {
+                // Background blurred circles logic (legacy)
+                if (false) {
                     Box(
                         modifier = Modifier
                             .size(300.dp)
@@ -328,7 +433,7 @@ fun MainScreen(viewModel: PetViewModel) {
                         onDeleteNotification = { id -> notificationList = notificationList.filter { it.id != id } },
                         onToggleNearbyAlerts = { nearbyAlertsEnabled = !nearbyAlertsEnabled },
                         nearbyAlertsEnabled = nearbyAlertsEnabled,
-                        isGlassTheme = currentThemeName == "Glass",
+                        isGlassTheme = currentThemeName == "Glass" || isPremiumTheme(currentThemeName),
                         bannerAds = bannerAds,
                         onAdImpression = { viewModel.trackAdImpression(it) },
                         onAdClick = handleAdClick

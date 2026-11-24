@@ -26,6 +26,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.pawrescue.data.model.PetRegistration
+import com.pawrescue.ui.theme.IceAmber
+import com.pawrescue.ui.theme.IceGradientTop
+import com.pawrescue.ui.theme.IceInk
+import com.pawrescue.ui.theme.IceInkSecondary
+import com.pawrescue.ui.theme.IceSurfaceMuted
+import com.pawrescue.ui.theme.IceTeal
+import com.pawrescue.ui.theme.PremiumGold
+import com.pawrescue.ui.theme.PremiumObsidian
+import com.pawrescue.ui.theme.PremiumTaupe
+import com.pawrescue.ui.theme.isIceCleanTheme
+import com.pawrescue.ui.theme.isPremiumTheme
 
 @Composable
 fun ProfileLayout(
@@ -48,27 +59,107 @@ fun ProfileLayout(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        val premiumActive = isPremiumTheme(currentTheme)
+        val iceActive = isIceCleanTheme(currentTheme)
+        val textPrimary = if (iceActive) IceInk else Color.White
+        val textSecondary = if (iceActive) IceInkSecondary else Color.Gray
+        val cardBg = when {
+            premiumActive -> Color(0xFF2A211B).copy(alpha = 0.65f)
+            iceActive -> Color.White.copy(alpha = 0.90f)
+            else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+        }
+        val cardBorder = when {
+            premiumActive -> Color.White.copy(alpha = 0.22f)
+            iceActive -> Color.White
+            else -> Color.White.copy(alpha = 0.08f)
+        }
+
         // --- SELECCIÓN DE TEMA ---
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, cardBorder),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Tema de la Aplicación", fontWeight = FontWeight.Bold, color = Color.White)
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Tema de la Aplicación",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = textPrimary
+                    )
+                    if (premiumActive || iceActive) {
+                        val swatches = if (premiumActive) {
+                            listOf(PremiumTaupe, PremiumGold, Color.White, PremiumObsidian)
+                        } else {
+                            listOf(IceGradientTop, IceTeal, IceAmber, IceInk)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            swatches.forEach { swatch ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(swatch)
+                                )
+                            }
+                        }
+                    }
+                }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Glass", "Premium Dark", "Midnight").forEach { theme ->
+                    listOf(
+                        "Glass" to "Glass",
+                        "Premium" to "Premium",
+                        "Ice Clean" to "Ice Clean"
+                    ).forEach { (themeKey, label) ->
+                        val isSelected = when (themeKey) {
+                            "Premium" -> premiumActive
+                            "Ice Clean" -> iceActive
+                            else -> currentTheme == themeKey
+                        }
+                        val pillContainer = when {
+                            isSelected && premiumActive -> Color.White
+                            isSelected && iceActive -> IceInk
+                            isSelected -> MaterialTheme.colorScheme.primary
+                            premiumActive -> Color.Transparent
+                            iceActive -> IceSurfaceMuted
+                            else -> MaterialTheme.colorScheme.surface
+                        }
+                        val pillContent = when {
+                            isSelected && premiumActive -> PremiumObsidian
+                            isSelected -> Color.White
+                            premiumActive -> Color.White.copy(alpha = 0.85f)
+                            iceActive -> IceInkSecondary
+                            else -> Color.Gray
+                        }
+                        val pillBorder = when {
+                            !isSelected && premiumActive -> BorderStroke(1.dp, Color.White.copy(alpha = 0.35f))
+                            !isSelected && iceActive -> BorderStroke(1.dp, IceGradientTop)
+                            else -> null
+                        }
+
                         Button(
-                            onClick = { onThemeChanged(theme) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
+                            onClick = { onThemeChanged(themeKey) },
+                            modifier = Modifier.weight(1f).height(42.dp),
+                            shape = RoundedCornerShape(100.dp),
+                            border = pillBorder,
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (currentTheme == theme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                contentColor = if (currentTheme == theme) Color.White else Color.Gray
+                                containerColor = pillContainer,
+                                contentColor = pillContent
                             )
                         ) {
-                            Text(theme, fontSize = 10.sp, maxLines = 1)
+                            Text(
+                                label,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 1
+                            )
                         }
                     }
                 }
@@ -77,9 +168,9 @@ fun ProfileLayout(
 
         // Tarjeta de Identidad
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
             shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            border = BorderStroke(1.dp, cardBorder),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -118,27 +209,30 @@ fun ProfileLayout(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = name,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = textPrimary)
                     )
                     Text(
                         text = email,
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                        style = MaterialTheme.typography.bodyMedium.copy(color = textSecondary)
                     )
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = if (iceActive) IceGradientTop else Color.White.copy(alpha = 0.1f)
+                )
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = onNameChanged,
-                    label = { Text("Nombre Completo", color = Color.Gray) },
+                    label = { Text("Nombre Completo", color = textSecondary) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedBorderColor = if (iceActive) IceGradientTop else Color.White.copy(alpha = 0.1f),
+                        focusedTextColor = textPrimary,
+                        unfocusedTextColor = textPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -146,14 +240,14 @@ fun ProfileLayout(
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChanged,
-                    label = { Text("Dirección De Email", color = Color.Gray) },
+                    label = { Text("Dirección De Email", color = textSecondary) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedBorderColor = if (iceActive) IceGradientTop else Color.White.copy(alpha = 0.1f),
+                        focusedTextColor = textPrimary,
+                        unfocusedTextColor = textPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -161,12 +255,17 @@ fun ProfileLayout(
                 Button(
                     onClick = onSaveProfile,
                     shape = RoundedCornerShape(100.dp),
-                    modifier = Modifier.fillMaxWidth().height(44.dp).background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)), RoundedCornerShape(100.dp)),
+                    modifier = Modifier.fillMaxWidth().height(44.dp).background(
+                        if (iceActive) Brush.horizontalGradient(listOf(IceInk, Color(0xFF243447)))
+                        else Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)),
+                        RoundedCornerShape(100.dp)
+                    ),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                 ) {
-                    Icon(Icons.Default.Check, "Guardar", modifier = Modifier.size(16.dp), tint = Color.White)
+                    val saveBtnContent = if (premiumActive) PremiumObsidian else Color.White
+                    Icon(Icons.Default.Check, "Guardar", modifier = Modifier.size(16.dp), tint = saveBtnContent)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Guardar Datos De Perfil", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                    Text("Guardar Datos De Perfil", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = saveBtnContent)
                 }
 
                 OutlinedButton(
@@ -185,8 +284,8 @@ fun ProfileLayout(
 
         // Métricas de Rescates Realizados por el Usuario
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            border = BorderStroke(1.dp, cardBorder),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -202,16 +301,16 @@ fun ProfileLayout(
                         text = registrations.size.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                        color = textPrimary
                     )
-                    Text("Total Rescates", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Total Rescates", fontSize = 10.sp, color = textSecondary, fontWeight = FontWeight.Bold)
                 }
 
                 Box(
                     modifier = Modifier
                         .height(30.dp)
                         .width(1.dp)
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(if (iceActive) IceGradientTop else Color.White.copy(alpha = 0.1f))
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -220,16 +319,16 @@ fun ProfileLayout(
                         text = syncedCount.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF81C784)
+                        color = if (iceActive) IceTeal else Color(0xFF81C784)
                     )
-                    Text("Sincronizados", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Sincronizados", fontSize = 10.sp, color = textSecondary, fontWeight = FontWeight.Bold)
                 }
 
                 Box(
                     modifier = Modifier
                         .height(30.dp)
                         .width(1.dp)
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(if (iceActive) IceGradientTop else Color.White.copy(alpha = 0.1f))
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -238,9 +337,9 @@ fun ProfileLayout(
                         text = pendingCount.toString(),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFFEC6A7C)
+                        color = if (iceActive) IceAmber else Color(0xFFEC6A7C)
                     )
-                    Text("Pendientes", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Pendientes", fontSize = 10.sp, color = textSecondary, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -251,7 +350,7 @@ fun ProfileLayout(
                 text = "Historial De Mascotas (${registrations.size})",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = textPrimary,
                     fontSize = 13.sp
                 ),
                 modifier = Modifier.padding(horizontal = 4.dp)

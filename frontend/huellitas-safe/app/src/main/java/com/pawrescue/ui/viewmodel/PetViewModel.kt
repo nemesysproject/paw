@@ -57,6 +57,9 @@ class PetViewModel(
     val currentUserEmail: String? get() = sessionManager.getUserEmail()
     val currentUserName: String? get() = sessionManager.getUserName()
     val currentUserId: String? get() = sessionManager.getUserId()
+    val currentUserRole: String get() = sessionManager.getUserRole()
+    val canUseBiometricQuickLogin: Boolean
+        get() = !sessionManager.getUserEmail().isNullOrBlank() && sessionManager.isLoggedIn()
 
     // --- SYNC STATUS ---
     private val _isSyncing = MutableStateFlow(false)
@@ -179,8 +182,24 @@ class PetViewModel(
     }
 
     // --- AUTHENTICATION ACTIONS ---
+    private fun extractServerError(errorBody: String?, fallback: String): String {
+        val raw = try {
+            org.json.JSONObject(errorBody ?: "").optString("error").takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        } ?: return fallback
+        return when {
+            raw.contains("Email already exists", ignoreCase = true) ->
+                "Este correo ya está registrado. Inicia sesión o utiliza otro correo."
+            raw.contains("Invalid credentials", ignoreCase = true) ->
+                "Correo o contraseña incorrectos."
+            else -> raw
+        }
+    }
+
     fun login(email: String, password: String, onSuccess: () -> Unit) {
-        if (email.isBlank() || password.isBlank()) {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || password.isBlank()) {
             _authError.value = "Los campos de correo y contraseña son requeridos."
             return
         }
@@ -188,33 +207,39 @@ class PetViewModel(
             _isAuthProcessing.value = true
             _authError.value = null
             try {
-                val response = repository.login(email, password)
+                val response = repository.login(cleanEmail, password)
                 if (response.isSuccessful) {
                     val tokenResp = response.body()
                     val finalAccessToken = tokenResp?.accessToken ?: tokenResp?.accessTokenCamel
                     val finalRefreshToken = tokenResp?.refreshToken ?: tokenResp?.refreshTokenCamel
-                    
+
                     if (!finalAccessToken.isNullOrBlank()) {
-                        // Guardar sesión (el reporter id se puede simular o extraer, en este caso guardamos el email como userId)
+                        val resolvedEmail = tokenResp?.email ?: cleanEmail
+                        val resolvedName = tokenResp?.name ?: resolvedEmail.substringBefore("@")
                         sessionManager.saveSession(
                             accessToken = finalAccessToken,
                             refreshToken = finalRefreshToken ?: "",
-                            email = email,
-                            name = email.substringBefore("@"),
-                            userId = "user-${email.hashCode()}"
+                            email = resolvedEmail,
+                            name = resolvedName,
+                            userId = "user-${resolvedEmail.hashCode()}",
+                            avatarUrl = tokenResp?.avatarUrl
                         )
                         _isLoggedIn.value = true
-                        _isAuthenticated.value = true // Bypass biometric on login
+                        _isAuthenticated.value = true
                         loadCatalogs()
                         fetchRemotePets()
                         loadAds()
+                        loadSocialData()
                         triggerSync()
                         onSuccess()
                     } else {
                         _authError.value = "Error al recibir el token de acceso."
                     }
                 } else {
-                    _authError.value = "Credenciales incorrectas o error en el servidor."
+                    _authError.value = extractServerError(
+                        response.errorBody()?.string(),
+                        "Credenciales incorrectas o error en el servidor."
+                    )
                 }
             } catch (e: Exception) {
                 _authError.value = "Fallo de conexión: ${e.localizedMessage}"
@@ -224,39 +249,135 @@ class PetViewModel(
         }
     }
 
-    fun register(name: String, email: String, password: String, onSuccess: () -> Unit) {
-        if (name.isBlank() || email.isBlank() || password.isBlank()) {
-            _authError.value = "Todos los campos son obligatorios para el registro."
-            return
+    fun register(
+        name: String,
+        email: String,
+        password: String,
+        confirmPassword: String = password,
+        onSuccess: () -> Unit
+    ) {
+        val cleanName = name.trim()
+        val cleanEmail = email.trim()
+        val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+        when {
+            cleanName.isBlank() || cleanEmail.isBlank() || password.isBlank() -> {
+                _authError.value = "Todos los campos son obligatorios para el registro."
+                return
+            }
+            !emailRegex.matches(cleanEmail) -> {
+                _authError.value = "Ingresa un correo electrónico válido."
+                return
+            }
+            password.length < 8 -> {
+                _authError.value = "La contraseña debe tener al menos 8 caracteres."
+                return
+            }
+            password != confirmPassword -> {
+                _authError.value = "Las contraseñas no coinciden."
+                return
+            }
         }
+
         viewModelScope.launch {
             _isAuthProcessing.value = true
             _authError.value = null
             try {
-                val response = repository.register(name, email, password)
+                val registerResp = repository.register(cleanName, cleanEmail, password)
+                if (registerResp.isSuccessful) {
+                    // El backend responde 201 Created sin cuerpo; hacemos login automático para obtener JWT
+                    val loginResp = repository.login(cleanEmail, password)
+                    if (loginResp.isSuccessful) {
+                        val tokenResp = loginResp.body()
+                        val finalAccessToken = tokenResp?.accessToken ?: tokenResp?.accessTokenCamel
+                        val finalRefreshToken = tokenResp?.refreshToken ?: tokenResp?.refreshTokenCamel
+                        if (!finalAccessToken.isNullOrBlank()) {
+                            sessionManager.saveSession(
+                                accessToken = finalAccessToken,
+                                refreshToken = finalRefreshToken ?: "",
+                                email = tokenResp?.email ?: cleanEmail,
+                                name = tokenResp?.name ?: cleanName,
+                                userId = "user-${cleanEmail.hashCode()}",
+                                avatarUrl = tokenResp?.avatarUrl
+                            )
+                            _isLoggedIn.value = true
+                            _isAuthenticated.value = true
+                            loadCatalogs()
+                            fetchRemotePets()
+                            loadAds()
+                            loadSocialData()
+                            triggerSync()
+                            onSuccess()
+                        } else {
+                            _authError.value = "Cuenta creada, pero no se recibió el token. Inicia sesión manualmente."
+                        }
+                    } else {
+                        _authError.value = "Cuenta creada con éxito. Ahora inicia sesión con tu correo y contraseña."
+                    }
+                } else {
+                    _authError.value = extractServerError(
+                        registerResp.errorBody()?.string(),
+                        "El correo ya está registrado o los datos son inválidos."
+                    )
+                }
+            } catch (e: Exception) {
+                _authError.value = "Fallo de conexión: ${e.localizedMessage}"
+            } finally {
+                _isAuthProcessing.value = false
+            }
+        }
+    }
+
+    fun setAuthError(message: String?) {
+        _authError.value = message
+    }
+
+    fun loginWithGoogle(
+        idToken: String,
+        nonce: String?,
+        fallbackEmail: String? = null,
+        fallbackName: String? = null,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _isAuthProcessing.value = true
+            _authError.value = null
+            try {
+                val response = repository.socialLogin(
+                    provider = "GOOGLE",
+                    idToken = idToken,
+                    nonce = nonce
+                )
                 if (response.isSuccessful) {
                     val tokenResp = response.body()
                     val finalAccessToken = tokenResp?.accessToken ?: tokenResp?.accessTokenCamel
                     val finalRefreshToken = tokenResp?.refreshToken ?: tokenResp?.refreshTokenCamel
-                    
                     if (!finalAccessToken.isNullOrBlank()) {
+                        val resolvedEmail = tokenResp?.email ?: fallbackEmail ?: "google-user@pawrescue.app"
+                        val resolvedName = tokenResp?.name ?: fallbackName ?: resolvedEmail.substringBefore("@")
                         sessionManager.saveSession(
                             accessToken = finalAccessToken,
                             refreshToken = finalRefreshToken ?: "",
-                            email = email,
-                            name = name,
-                            userId = "user-${email.hashCode()}"
+                            email = resolvedEmail,
+                            name = resolvedName,
+                            userId = "user-${resolvedEmail.hashCode()}"
                         )
                         _isLoggedIn.value = true
                         _isAuthenticated.value = true
                         loadCatalogs()
                         fetchRemotePets()
+                        loadAds()
+                        loadSocialData()
+                        triggerSync()
                         onSuccess()
                     } else {
-                        _authError.value = "Cuenta creada pero falló el inicio de sesión automático."
+                        _authError.value = "Error al recibir el token de acceso desde el servidor."
                     }
                 } else {
-                    _authError.value = "El correo ya está registrado o datos inválidos."
+                    val errBody = response.errorBody()?.string()
+                    val serverMsg = try {
+                        org.json.JSONObject(errBody ?: "").optString("error").takeIf { it.isNotBlank() }
+                    } catch (_: Exception) { null }
+                    _authError.value = serverMsg ?: "No se pudo validar tu cuenta de Google en el servidor."
                 }
             } catch (e: Exception) {
                 _authError.value = "Fallo de conexión: ${e.localizedMessage}"
@@ -280,15 +401,52 @@ class PetViewModel(
     }
 
     fun biometricLogin() {
-        // En un caso real, aquí usaríamos un refresh token o contraseña guardada.
-        // Para este prototipo, si la biometría es exitosa y hay un usuario recordado, permitimos el acceso.
-        if (!currentUserEmail.isNullOrBlank()) {
-            _isLoggedIn.value = true
-            _isAuthenticated.value = true
-            loadCatalogs()
-            fetchRemotePets()
-            loadAds()
-            triggerSync()
+        viewModelScope.launch {
+            if (sessionManager.isAccessTokenValid()) {
+                _isLoggedIn.value = true
+                _isAuthenticated.value = true
+                loadCatalogs()
+                fetchRemotePets()
+                loadAds()
+                loadSocialData()
+                triggerSync()
+                return@launch
+            }
+
+            val refresh = sessionManager.getRefreshToken()
+            if (!refresh.isNullOrBlank()) {
+                _isAuthProcessing.value = true
+                _authError.value = null
+                try {
+                    val resp = repository.refreshToken(refresh)
+                    val body = resp.body()
+                    val newAccess = body?.accessToken ?: body?.accessTokenCamel
+                    val newRefresh = body?.refreshToken ?: body?.refreshTokenCamel ?: refresh
+                    if (resp.isSuccessful && !newAccess.isNullOrBlank()) {
+                        sessionManager.updateTokens(newAccess, newRefresh)
+                        _isLoggedIn.value = true
+                        _isAuthenticated.value = true
+                        loadCatalogs()
+                        fetchRemotePets()
+                        loadAds()
+                        loadSocialData()
+                        triggerSync()
+                    } else {
+                        sessionManager.clearTokens()
+                        _isLoggedIn.value = false
+                        _isAuthenticated.value = false
+                        _authError.value = "Tu sesión expiró. Inicia sesión nuevamente."
+                    }
+                } catch (e: Exception) {
+                    _authError.value = "No se pudo renovar tu sesión: ${e.localizedMessage}"
+                } finally {
+                    _isAuthProcessing.value = false
+                }
+            } else {
+                _isLoggedIn.value = false
+                _isAuthenticated.value = false
+                _authError.value = "Inicia sesión para activar el acceso biométrico."
+            }
         }
     }
 

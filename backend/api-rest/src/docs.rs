@@ -41,6 +41,7 @@ use crate::models::social::*;
         catalog_queries::get_all_statuses,
         auth_handlers::register,
         auth_handlers::login,
+        auth_handlers::social_login,
         auth_handlers::refresh,
         ad_handlers::get_active_ads,
         ad_handlers::record_ad_event,
@@ -73,7 +74,7 @@ use crate::models::social::*;
     components(
         schemas(
             PetStatus, PetGender, UserRole, MediaType,
-            User, Species, Breed, Pet, Media, Shelter, Veterinary,
+            User, UserIdentity, Species, Breed, Pet, Media, Shelter, Veterinary,
             AdCategoryEntity, AdPlacementEntity, AdEventTypeEntity,
             Advertiser, AdCampaign, AdMetricEvent,
             DeviceToken, PetSighting, Conversation, ConversationParticipant,
@@ -81,7 +82,7 @@ use crate::models::social::*;
             CreatePetCommand, UpdatePetCommand, crate::models::pet::queries::PetDetailResponse,
             CreateSpeciesCommand, UpdateSpeciesCommand, CreateBreedCommand, UpdateBreedCommand,
             BreedQuery,
-            RegisterRequest, LoginRequest, TokenResponse, RefreshRequest,
+            RegisterRequest, LoginRequest, SocialLoginRequest, TokenResponse, RefreshRequest,
             CreateAdvertiserRequest, UpdateAdvertiserRequest,
             CreateAdCampaignRequest, UpdateAdCampaignRequest,
             RecordAdEventRequest, AdFeedItemResponse, AdCampaignSummaryResponse,

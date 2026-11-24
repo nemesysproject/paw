@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.pawrescue.ui.viewmodel.PetViewModel
+import com.pawrescue.utils.GoogleAuthHelper
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginRegisterRedesignScreen(
@@ -42,15 +44,17 @@ fun LoginRegisterRedesignScreen(
     var email by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     
     val authError by viewModel.authError.collectAsStateWithLifecycle()
     val isProcessing by viewModel.isAuthProcessing.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-    // Check if we have credentials stored to show biometric option instead of form
+    // Mostrar acceso rápido biométrico solo si existe sesión válida o renovable con refresh_token
     val savedEmail = viewModel.currentUserEmail
-    val hasCredentials = !savedEmail.isNullOrBlank()
+    val hasCredentials = viewModel.canUseBiometricQuickLogin
 
     Box(
         modifier = Modifier
@@ -146,10 +150,42 @@ fun LoginRegisterRedesignScreen(
                             )
 
                             TextButton(onClick = { viewModel.clearStoredCredentials() }) {
-                                Text("Usar otra cuenta", color = Color.White, textDecoration = TextDecoration.Underline)
+                                Text("Usar otra cuenta o registrarme", color = Color.White, textDecoration = TextDecoration.Underline)
                             }
                         }
                     } else {
+                        // Selector claro de pestañas: Iniciar Sesión / Crear Cuenta
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(100.dp))
+                                .background(Color.White.copy(alpha = 0.12f))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf(true to "Iniciar Sesión", false to "Crear Cuenta").forEach { (tabIsLogin, label) ->
+                                val selected = isLoginTab == tabIsLogin
+                                Surface(
+                                    onClick = {
+                                        isLoginTab = tabIsLogin
+                                        viewModel.setAuthError(null)
+                                    },
+                                    shape = RoundedCornerShape(100.dp),
+                                    color = if (selected) Color.White else Color.Transparent,
+                                    modifier = Modifier.weight(1f).height(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = label,
+                                            color = if (selected) Color(0xFFE91E63) else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         // Error Message Area (Styled like the red box in example)
                         authError?.let { err ->
                             Surface(
@@ -172,6 +208,7 @@ fun LoginRegisterRedesignScreen(
                                 value = name,
                                 onValueChange = { name = it },
                                 placeholder = { Text("Nombre Completo", color = Color.White.copy(alpha = 0.5f)) },
+                                leadingIcon = { Icon(Icons.Default.Person, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp)) },
                                 singleLine = true,
                                 shape = RoundedCornerShape(100.dp),
                                 modifier = Modifier.fillMaxWidth(),
@@ -208,7 +245,13 @@ fun LoginRegisterRedesignScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            placeholder = { Text("Contraseña", color = Color.White.copy(alpha = 0.5f)) },
+                            placeholder = {
+                                Text(
+                                    if (isLoginTab) "Contraseña" else "Contraseña (mín. 8 caracteres)",
+                                    color = Color.White.copy(alpha = 0.5f)
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Default.Lock, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp)) },
                             trailingIcon = {
                                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                                     Icon(
@@ -233,6 +276,28 @@ fun LoginRegisterRedesignScreen(
                             )
                         )
 
+                        if (!isLoginTab) {
+                            OutlinedTextField(
+                                value = confirmPassword,
+                                onValueChange = { confirmPassword = it },
+                                placeholder = { Text("Confirmar Contraseña", color = Color.White.copy(alpha = 0.5f)) },
+                                leadingIcon = { Icon(Icons.Default.Lock, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp)) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(100.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.White.copy(alpha = 0.1f),
+                                    unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
+                                    focusedBorderColor = Color.White.copy(alpha = 0.5f),
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                                )
+                            )
+                        }
+
                         // Submit Button (White in example)
                         Button(
                             onClick = {
@@ -241,8 +306,8 @@ fun LoginRegisterRedesignScreen(
                                         Toast.makeText(context, "Sesión iniciada con éxito", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
-                                    viewModel.register(name, email, password) {
-                                        Toast.makeText(context, "Cuenta creada con éxito", Toast.LENGTH_SHORT).show()
+                                    viewModel.register(name, email, password, confirmPassword) {
+                                        Toast.makeText(context, "Cuenta creada y sesión iniciada", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -265,7 +330,66 @@ fun LoginRegisterRedesignScreen(
                             }
                         }
                         
-                        Divider(
+                        // Google Sign-In Button (Credential Manager - Liquid Glass)
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    viewModel.setAuthError(null)
+                                    val result = GoogleAuthHelper.signIn(context)
+                                    result.onSuccess { payload ->
+                                        viewModel.loginWithGoogle(
+                                            idToken = payload.idToken,
+                                            nonce = payload.nonce,
+                                            fallbackEmail = payload.email,
+                                            fallbackName = payload.displayName
+                                        ) {
+                                            Toast.makeText(context, "Sesión iniciada con Google", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }.onFailure { err ->
+                                        viewModel.setAuthError(err.message ?: "Error al iniciar sesión con Google")
+                                    }
+                                }
+                            },
+                            enabled = !isProcessing,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(100.dp),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.White.copy(alpha = 0.14f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White,
+                                    modifier = Modifier.size(26.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "G",
+                                            color = Color(0xFF4285F4),
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 15.sp
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Continuar con Google",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(
                             color = Color.White.copy(alpha = 0.2f),
                             modifier = Modifier.padding(vertical = 8.dp)
                         )

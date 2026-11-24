@@ -10,11 +10,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::env;
 
+fn default_token_type() -> String {
+    "access".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String, // ID del usuario
     pub exp: usize,  // Expiración
     pub role: String,
+    #[serde(default = "default_token_type")]
+    pub token_type: String, // "access" o "refresh"
 }
 
 pub struct JwtMiddleware(pub Claims);
@@ -52,6 +58,10 @@ where
             (StatusCode::UNAUTHORIZED, Json(json!({"error": "Invalid or expired token"}))).into_response()
         })?;
 
+        if token_data.claims.token_type != "access" {
+            return Err((StatusCode::UNAUTHORIZED, Json(json!({"error": "Invalid token type"}))).into_response());
+        }
+
         Ok(JwtMiddleware(token_data.claims))
     }
 }
@@ -73,12 +83,14 @@ pub fn generate_tokens(user_id: &str, role: &str) -> Result<(String, String), js
         sub: user_id.to_string(),
         exp: access_exp,
         role: role.to_string(),
+        token_type: "access".to_string(),
     };
 
     let refresh_claims = Claims {
         sub: user_id.to_string(),
         exp: refresh_exp,
         role: role.to_string(),
+        token_type: "refresh".to_string(),
     };
 
     let access_token = jsonwebtoken::encode(

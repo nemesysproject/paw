@@ -68,6 +68,18 @@ val debugBaseUrl: String = (System.getenv("LOCAL_API_URL")?.trim()?.takeIf { it.
   ?: "http://${detectLocalLanIp()}/").let { if (it.endsWith("/")) it else "$it/" }
 val releaseBaseUrl: String = resolveReleaseBaseUrl()
 
+fun resolveGoogleWebClientId(): String {
+  val envId = System.getenv("GOOGLE_WEB_CLIENT_ID")?.trim()
+  if (!envId.isNullOrBlank()) return envId
+  val props = Properties()
+  listOf(".env", ".env.pawrescue").forEach { fileName ->
+    val f = rootProject.file(fileName)
+    if (f.exists()) f.inputStream().use { props.load(it) }
+  }
+  return (props.getProperty("GOOGLE_WEB_CLIENT_ID") ?: "").trim().trim('"').trim('\'')
+}
+val googleWebClientId: String = resolveGoogleWebClientId()
+
 println("[Huellitas Safe] Debug BASE_URL auto-detectada: $debugBaseUrl")
 
 kotlin {
@@ -87,6 +99,7 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
   }
 
   signingConfigs {
@@ -135,6 +148,7 @@ secrets {
   // BASE_URL se gestiona dinámicamente por buildType (IP Wi-Fi automática en debug, HTTPS en release)
   ignoreList.add("BASE_URL")
   ignoreList.add("PROD_BASE_URL")
+  ignoreList.add("GOOGLE_WEB_CLIENT_ID")
 }
 
 // Some unused dependencies are commented out below instead of being removed.
@@ -145,6 +159,9 @@ dependencies {
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.biometric)
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services.auth)
+  implementation(libs.googleid)
   implementation(libs.androidx.camera.camera2)
   implementation(libs.androidx.camera.core)
   implementation(libs.androidx.camera.lifecycle)
