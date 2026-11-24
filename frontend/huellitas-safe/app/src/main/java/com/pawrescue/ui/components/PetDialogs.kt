@@ -326,14 +326,25 @@ fun PetDetailDialog(
     pet: PetRegistration,
     onDismiss: () -> Unit,
     onEdit: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    onReportSighting: ((String) -> Unit)? = null,
+    onStartChat: (() -> Unit)? = null,
+    onRequestAdoption: (() -> Unit)? = null,
+    onReportContent: (() -> Unit)? = null
 ) {
     val photoUrls = remember(pet.photosJson) { if (pet.photosJson.isBlank()) emptyList() else pet.photosJson.split(",") }
+    var sightingNote by remember { mutableStateOf("") }
+    var showSightingInput by remember { mutableStateOf(false) }
+
     Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "Detalle", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Detalle de Mascota", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Close, null) }
                 }
                 HorizontalDivider()
@@ -344,7 +355,59 @@ fun PetDetailDialog(
                     }
                 }
                 Text(text = pet.name, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-                Text(text = pet.description, color = Color.DarkGray)
+                Text(text = pet.description, color = Color.White.copy(alpha = 0.85f))
+
+                // Acciones interactivas entre usuarios (solo para mascotas sincronizadas con remoteId)
+                if (!pet.remoteId.isNullOrBlank()) {
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+                    Text("Interactuar", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
+
+                    if (showSightingInput && onReportSighting != null) {
+                        OutlinedTextField(
+                            value = sightingNote,
+                            onValueChange = { sightingNote = it },
+                            label = { Text("Nota del avistamiento") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            onClick = { onReportSighting(sightingNote) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Enviar ubicación GPS ahora")
+                        }
+                    } else if (onReportSighting != null) {
+                        OutlinedButton(
+                            onClick = { showSightingInput = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("¡La vi aquí! (Reportar avistamiento)")
+                        }
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (onStartChat != null) {
+                            Button(onClick = onStartChat, modifier = Modifier.weight(1f)) {
+                                Text("Mensaje", fontSize = 12.sp)
+                            }
+                        }
+                        if (onRequestAdoption != null && pet.status.equals("ADOPTION", ignoreCase = true)) {
+                            Button(onClick = onRequestAdoption, modifier = Modifier.weight(1f)) {
+                                Text("Adoptar", fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    if (onReportContent != null) {
+                        TextButton(onClick = onReportContent, modifier = Modifier.align(Alignment.End)) {
+                            Text("Reportar publicación", fontSize = 11.sp, color = Color(0xFFFB7185))
+                        }
+                    }
+                }
+
                 // Info actions
                 if (onEdit != null || onDelete != null) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

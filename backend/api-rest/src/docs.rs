@@ -10,9 +10,11 @@ use crate::handlers::catalog::queries as catalog_queries;
 use crate::handlers::auth as auth_handlers;
 use crate::handlers::ads as ad_handlers;
 use crate::handlers::ai as ai_handlers;
+use crate::handlers::social as social_handlers;
 use crate::models::auth::*;
 use crate::models::ads::*;
 use crate::models::ai::*;
+use crate::models::social::*;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -54,6 +56,19 @@ use crate::models::ai::*;
         ad_handlers::update_campaign,
         ad_handlers::delete_campaign,
         ai_handlers::chat_assistant,
+        social_handlers::list_sightings_by_pet,
+        social_handlers::create_sighting,
+        social_handlers::confirm_sighting,
+        social_handlers::list_conversations,
+        social_handlers::create_conversation,
+        social_handlers::list_messages,
+        social_handlers::send_message,
+        social_handlers::list_adoptions,
+        social_handlers::create_adoption,
+        social_handlers::update_adoption_status,
+        social_handlers::register_device_token,
+        social_handlers::block_user,
+        social_handlers::create_content_report,
     ),
     components(
         schemas(
@@ -61,6 +76,8 @@ use crate::models::ai::*;
             User, Species, Breed, Pet, Media, Shelter, Veterinary,
             AdCategoryEntity, AdPlacementEntity, AdEventTypeEntity,
             Advertiser, AdCampaign, AdMetricEvent,
+            DeviceToken, PetSighting, Conversation, ConversationParticipant,
+            Message, AdoptionRequest, UserBlock, ContentReport,
             CreatePetCommand, UpdatePetCommand, crate::models::pet::queries::PetDetailResponse,
             CreateSpeciesCommand, UpdateSpeciesCommand, CreateBreedCommand, UpdateBreedCommand,
             BreedQuery,
@@ -69,7 +86,12 @@ use crate::models::ai::*;
             CreateAdCampaignRequest, UpdateAdCampaignRequest,
             RecordAdEventRequest, AdFeedItemResponse, AdCampaignSummaryResponse,
             AdCatalogsResponse, UploadAdImageResponse,
-            AiChatMessage, AiChatRequest, AiNavigationAction, AiChatResponse
+            AiChatMessage, AiChatRequest, AiNavigationAction, AiChatResponse,
+            CreateSightingRequest, PetSightingResponse,
+            CreateConversationRequest, ConversationSummaryResponse,
+            SendMessageRequest, MessageResponse,
+            CreateAdoptionRequest, UpdateAdoptionStatusRequest, AdoptionRequestResponse,
+            RegisterDeviceTokenRequest, BlockUserRequest, CreateContentReportRequest
         )
     ),
     tags(
@@ -78,7 +100,11 @@ use crate::models::ai::*;
         (name = "Catalogs", description = "Gestión de especies y razas"),
         (name = "Auth", description = "Autenticación y gestión de usuarios"),
         (name = "Ads", description = "Publicidad geolocalizada, patrocinadores y campañas gubernamentales"),
-        (name = "AI", description = "Copiloto IA para consultas y navegación asistida en el portal")
+        (name = "AI", description = "Copiloto IA para consultas y navegación asistida en el portal"),
+        (name = "Sightings", description = "Avistamientos colaborativos con ubicación GPS"),
+        (name = "Conversations", description = "Mensajería contextual entre usuarios, refugios y veterinarias"),
+        (name = "Adoptions", description = "Solicitudes formales de adopción"),
+        (name = "Moderation & Push", description = "Notificaciones push (FCM), bloqueos y reportes UGC")
     ),
     info(
         title = "Save Puppy API",

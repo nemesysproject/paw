@@ -7,3 +7,4 @@ pub mod auth;
 pub mod dashboard;
 pub mod ads;
 pub mod ai;
+pub mod social;

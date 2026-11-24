@@ -30,7 +30,8 @@ class MainActivity : FragmentActivity() {
             database.themeDao(), 
             database.catalogDao(), 
             apiService,
-            database.adDao()
+            database.adDao(),
+            database.socialDao()
         )
         val sessionManager = com.pawrescue.data.local.SessionManager(this)
         

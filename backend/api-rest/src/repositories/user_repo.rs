@@ -8,7 +8,7 @@ impl UserRepository {
     where E: Executor<'a, Database = Postgres>
     {
         sqlx::query_as::<_, User>(
-            r#"SELECT id, email, password, name, role, "createdAt" as created_at, "updatedAt" as updated_at FROM "User" WHERE email = $1"#
+            r#"SELECT id, email, password, name, phone, "avatarUrl" as avatar_url, role, "createdAt" as created_at, "updatedAt" as updated_at FROM "User" WHERE email = $1"#
         )
         .bind(email)
         .fetch_optional(executor)
@@ -19,7 +19,7 @@ impl UserRepository {
     where E: Executor<'a, Database = Postgres>
     {
         sqlx::query_as::<_, User>(
-            r#"SELECT id, email, password, name, role, "createdAt" as created_at, "updatedAt" as updated_at FROM "User" WHERE id = $1"#
+            r#"SELECT id, email, password, name, phone, "avatarUrl" as avatar_url, role, "createdAt" as created_at, "updatedAt" as updated_at FROM "User" WHERE id = $1"#
         )
         .bind(id)
         .fetch_optional(executor)

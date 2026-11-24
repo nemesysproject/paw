@@ -98,6 +98,24 @@ class PetViewModel(
 
     private val recordedImpressions = mutableSetOf<String>()
 
+    // --- SOCIAL INTERACTIONS STATE ---
+    val conversations: StateFlow<List<ConversationEntity>> = repository.conversations
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val adoptionRequests: StateFlow<List<AdoptionRequestEntity>> = repository.adoptionRequests
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedConversationId = MutableStateFlow<String?>(null)
+    val selectedConversationId: StateFlow<String?> = _selectedConversationId.asStateFlow()
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val activeMessages: StateFlow<List<MessageEntity>> = _selectedConversationId
+        .flatMapLatest { id ->
+            if (id.isNullOrBlank()) kotlinx.coroutines.flow.flowOf(emptyList())
+            else repository.getMessagesFlow(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // --- FORM TEMPORARY FIELDS ---
     private val _formPhotos = MutableStateFlow<List<String>>(emptyList())
     val formPhotos: StateFlow<List<String>> = _formPhotos.asStateFlow()
@@ -330,6 +348,119 @@ class PetViewModel(
                 lat = lat,
                 lon = lon
             )
+        }
+    }
+
+    // --- SOCIAL INTERACTIONS ACTIONS ---
+    fun loadSocialData() {
+        if (!_isOnline.value || !_isLoggedIn.value) return
+        viewModelScope.launch {
+            repository.syncConversations()
+            repository.syncAdoptions()
+        }
+    }
+
+    fun openConversation(conversationId: String?) {
+        _selectedConversationId.value = conversationId
+        if (!conversationId.isNullOrBlank() && _isOnline.value) {
+            viewModelScope.launch {
+                repository.syncMessages(conversationId)
+            }
+        }
+    }
+
+    fun sendChatText(conversationId: String, text: String, onDone: (Boolean) -> Unit = {}) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val ok = repository.sendMessage(
+                conversationId = conversationId,
+                type = "TEXT",
+                content = text.trim()
+            )
+            onDone(ok)
+        }
+    }
+
+    fun sendChatLocation(
+        conversationId: String,
+        latitude: Double,
+        longitude: Double,
+        label: String = "Ubicación compartida",
+        onDone: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val ok = repository.sendMessage(
+                conversationId = conversationId,
+                type = "LOCATION",
+                content = "Ubicación GPS: %.5f, %.5f".format(latitude, longitude),
+                latitude = latitude,
+                longitude = longitude,
+                locationLabel = label
+            )
+            onDone(ok)
+        }
+    }
+
+    fun reportPetSighting(
+        petId: String,
+        notes: String,
+        latitude: Double,
+        longitude: Double,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            val ok = repository.reportSighting(
+                petId = petId,
+                notes = notes.ifBlank { "Avistamiento reportado desde Huellitas Safe" },
+                latitude = latitude,
+                longitude = longitude
+            )
+            onResult(ok)
+        }
+    }
+
+    fun startConversationForPet(
+        petId: String,
+        type: String,
+        initialMessage: String,
+        onCreated: (ConversationEntity?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val conv = repository.createConversation(
+                type = type,
+                petId = petId,
+                initialMessage = initialMessage
+            )
+            if (conv != null) {
+                openConversation(conv.id)
+            }
+            onCreated(conv)
+        }
+    }
+
+    fun requestPetAdoption(
+        petId: String,
+        notes: String,
+        onCreated: (AdoptionRequestEntity?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val req = repository.requestAdoption(petId = petId, notes = notes)
+            req?.conversationId?.let { openConversation(it) }
+            onCreated(req)
+        }
+    }
+
+    fun updateAdoptionStatus(adoptionId: String, status: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val ok = repository.updateAdoptionStatus(adoptionId, status)
+            onResult(ok)
+        }
+    }
+
+    fun reportContentItem(targetType: String, targetId: String, reason: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val ok = repository.reportContent(targetType, targetId, reason)
+            onResult(ok)
         }
     }
 

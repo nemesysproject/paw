@@ -57,6 +57,8 @@ pub async fn register(
         email: req.email,
         password: hashed_password,
         name: req.name,
+        phone: None,
+        avatar_url: None,
         role: "USER".to_string(),
         created_at: now,
         updated_at: now,

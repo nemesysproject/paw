@@ -8,6 +8,7 @@ pub mod catalog;
 pub mod auth;
 pub mod ads;
 pub mod ai;
+pub mod social;
 
 pub fn api_routes() -> Router<AppState> {
     Router::new()
@@ -18,4 +19,8 @@ pub fn api_routes() -> Router<AppState> {
         .nest("/auth", auth::auth_routes())
         .nest("/ads", ads::ad_routes())
         .nest("/ai", ai::ai_routes())
+        .nest("/sightings", social::sighting_routes())
+        .nest("/conversations", social::conversation_routes())
+        .nest("/adoptions", social::adoption_routes())
+        .nest("/social", social::moderation_routes())
 }

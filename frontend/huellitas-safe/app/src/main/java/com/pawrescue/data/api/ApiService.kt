@@ -83,4 +83,58 @@ interface ApiService {
         @Path("id") campaignId: String,
         @Body request: RecordAdEventRequest
     ): Response<ResponseBody>
+
+    // --- SOCIAL INTERACTIONS (Sightings, Chat, Adoptions, Moderation) ---
+    @GET("api/v1/sightings/pet/{petId}")
+    suspend fun listSightingsByPet(
+        @Path("petId") petId: String
+    ): Response<List<PetSightingEntity>>
+
+    @POST("api/v1/sightings")
+    suspend fun createSighting(
+        @Body request: CreateSightingRequest
+    ): Response<PetSightingEntity>
+
+    @GET("api/v1/conversations")
+    suspend fun listConversations(): Response<List<ConversationEntity>>
+
+    @POST("api/v1/conversations")
+    suspend fun createConversation(
+        @Body request: CreateConversationRequest
+    ): Response<ConversationEntity>
+
+    @GET("api/v1/conversations/{id}/messages")
+    suspend fun listMessages(
+        @Path("id") conversationId: String
+    ): Response<List<MessageEntity>>
+
+    @POST("api/v1/conversations/{id}/messages")
+    suspend fun sendMessage(
+        @Path("id") conversationId: String,
+        @Body request: SendMessageRequest
+    ): Response<MessageEntity>
+
+    @GET("api/v1/adoptions")
+    suspend fun listAdoptions(): Response<List<AdoptionRequestEntity>>
+
+    @POST("api/v1/adoptions")
+    suspend fun createAdoption(
+        @Body request: CreateAdoptionRequestDto
+    ): Response<AdoptionRequestEntity>
+
+    @PATCH("api/v1/adoptions/{id}/status")
+    suspend fun updateAdoptionStatus(
+        @Path("id") adoptionId: String,
+        @Body request: UpdateAdoptionStatusRequest
+    ): Response<ResponseBody>
+
+    @POST("api/v1/social/blocks")
+    suspend fun blockUser(
+        @Body request: BlockUserRequest
+    ): Response<ResponseBody>
+
+    @POST("api/v1/social/reports")
+    suspend fun reportContent(
+        @Body request: ContentReportRequest
+    ): Response<ResponseBody>
 }

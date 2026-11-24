@@ -14,9 +14,13 @@ import com.pawrescue.data.model.*
         BreedDto::class,
         GenderDto::class,
         StatusDto::class,
-        AdFeedItemDto::class
+        AdFeedItemDto::class,
+        PetSightingEntity::class,
+        ConversationEntity::class,
+        MessageEntity::class,
+        AdoptionRequestEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun themeDao(): ThemeDao
     abstract fun catalogDao(): CatalogDao
     abstract fun adDao(): AdDao
+    abstract fun socialDao(): SocialDao
 
     companion object {
         @Volatile

@@ -36,6 +36,7 @@ import com.pawrescue.ui.theme.GlassGradientMid2
 import com.pawrescue.ui.theme.GlassGradientTop
 import com.pawrescue.ui.viewmodel.PetViewModel
 import com.pawrescue.utils.BiometricHelper
+import com.pawrescue.utils.LocationHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,6 +135,7 @@ fun MainScreen(viewModel: PetViewModel) {
             triggerBiometricAuth()
         } else if (isLoggedIn && isAuthenticated) {
             viewModel.loadAds()
+            viewModel.loadSocialData()
         }
     }
 
@@ -191,6 +193,18 @@ fun MainScreen(viewModel: PetViewModel) {
                         onClick = { currentTab = "feed" },
                         icon = { Icon(if (currentTab == "feed") Icons.Filled.Pets else Icons.Outlined.Pets, null) },
                         label = if (currentTab == "feed") { { Text("DESCUBRIR") } } else null,
+                        alwaysShowLabel = false,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = Color.Gray,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        )
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == "mensajes",
+                        onClick = { currentTab = "mensajes" },
+                        icon = { Icon(if (currentTab == "mensajes") Icons.Filled.Chat else Icons.Outlined.Chat, null) },
+                        label = if (currentTab == "mensajes") { { Text("MENSAJES") } } else null,
                         alwaysShowLabel = false,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -329,6 +343,10 @@ fun MainScreen(viewModel: PetViewModel) {
                         onAdImpression = { viewModel.trackAdImpression(it) },
                         onAdClick = handleAdClick
                     )
+                    "mensajes" -> MessagesScreen(
+                        viewModel = viewModel,
+                        isGlassTheme = currentThemeName == "Glass"
+                    )
                     "perfil" -> {
                         val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
                         ProfileLayout(
@@ -355,6 +373,70 @@ fun MainScreen(viewModel: PetViewModel) {
     }
 
     selectedPetForDetail?.let { pet ->
-        PetDetailDialog(pet, { selectedPetForDetail = null }, { petToEdit = pet; selectedPetForDetail = null; showAddDialog = true }, { viewModel.deleteRegistration(pet.id, pet.remoteId); selectedPetForDetail = null })
+        PetDetailDialog(
+            pet = pet,
+            onDismiss = { selectedPetForDetail = null },
+            onEdit = { petToEdit = pet; selectedPetForDetail = null; showAddDialog = true },
+            onDelete = { viewModel.deleteRegistration(pet.id, pet.remoteId); selectedPetForDetail = null },
+            onReportSighting = { note ->
+                val remoteId = pet.remoteId ?: return@PetDetailDialog
+                LocationHelper(context).getLastLocation(
+                    onSuccess = { lat, lon ->
+                        viewModel.reportPetSighting(remoteId, note, lat, lon) { ok ->
+                            Toast.makeText(
+                                context,
+                                if (ok) "Avistamiento enviado al dueño" else "No se pudo enviar el avistamiento",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            if (ok) selectedPetForDetail = null
+                        }
+                    },
+                    onFailure = {
+                        Toast.makeText(context, "Activa el GPS para reportar el avistamiento", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            },
+            onStartChat = {
+                val remoteId = pet.remoteId ?: return@PetDetailDialog
+                val convType = if (pet.status.equals("ADOPTION", ignoreCase = true)) "ADOPTION_INQUIRY" else "PET_SIGHTING"
+                viewModel.startConversationForPet(
+                    petId = remoteId,
+                    type = convType,
+                    initialMessage = "Hola, me comunico respecto a ${pet.name}"
+                ) { conv ->
+                    if (conv != null) {
+                        selectedPetForDetail = null
+                        currentTab = "mensajes"
+                    } else {
+                        Toast.makeText(context, "No se pudo abrir la conversación", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onRequestAdoption = {
+                val remoteId = pet.remoteId ?: return@PetDetailDialog
+                viewModel.requestPetAdoption(
+                    petId = remoteId,
+                    notes = "Hola, estoy interesado en adoptar a ${pet.name}."
+                ) { req ->
+                    if (req != null) {
+                        Toast.makeText(context, "Solicitud de adopción enviada", Toast.LENGTH_SHORT).show()
+                        selectedPetForDetail = null
+                        currentTab = "mensajes"
+                    } else {
+                        Toast.makeText(context, "No se pudo enviar la solicitud", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onReportContent = {
+                val remoteId = pet.remoteId ?: return@PetDetailDialog
+                viewModel.reportContentItem("PET", remoteId, "Reporte desde la app móvil") { ok ->
+                    Toast.makeText(
+                        context,
+                        if (ok) "Reporte enviado para revisión" else "No se pudo enviar el reporte",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
     }
 }

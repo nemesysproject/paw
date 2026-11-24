@@ -17,6 +17,8 @@ pub struct User {
     pub email: String,
     pub password: String, // En la BD guardaremos el hash, ojo al exponer esto en el DTO final
     pub name: String,
+    pub phone: Option<String>,
+    pub avatar_url: Option<String>,
     pub role: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -98,6 +100,7 @@ pub struct Shelter {
     pub email: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub owner_id: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -116,6 +119,7 @@ pub struct Veterinary {
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
     pub geohash: Option<String>,
+    pub owner_id: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -199,4 +203,107 @@ pub struct AdMetricEvent {
     pub user_id: Option<String>,
     pub geohash: Option<String>,
     pub created_at: NaiveDateTime,
+}
+
+// --- Entidades de Interactividad Social (Avistamientos, Chat, Adopciones, Push, UGC) ---
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct DeviceToken {
+    pub id: String,
+    pub user_id: String,
+    pub fcm_token: String,
+    pub platform: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct PetSighting {
+    pub id: String,
+    pub pet_id: String,
+    pub reporter_id: String,
+    pub notes: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub geohash: Option<String>,
+    pub image_url: Option<String>,
+    pub image_public_id: Option<String>,
+    pub sighted_at: NaiveDateTime,
+    pub is_confirmed_by_owner: bool,
+    pub created_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct Conversation {
+    pub id: String,
+    pub r#type: String,
+    pub status: String,
+    pub pet_id: Option<String>,
+    pub shelter_id: Option<String>,
+    pub veterinary_id: Option<String>,
+    pub last_message_at: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct ConversationParticipant {
+    pub id: String,
+    pub conversation_id: String,
+    pub user_id: String,
+    pub last_read_at: Option<NaiveDateTime>,
+    pub is_muted: bool,
+    pub joined_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct Message {
+    pub id: String,
+    pub conversation_id: String,
+    pub sender_id: String,
+    pub r#type: String,
+    pub content: Option<String>,
+    pub media_url: Option<String>,
+    pub media_public_id: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub geohash: Option<String>,
+    pub location_label: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct AdoptionRequest {
+    pub id: String,
+    pub pet_id: String,
+    pub applicant_id: String,
+    pub owner_id: String,
+    pub shelter_id: Option<String>,
+    pub conversation_id: Option<String>,
+    pub status: String,
+    pub notes: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct UserBlock {
+    pub id: String,
+    pub blocker_id: String,
+    pub blocked_user_id: String,
+    pub reason: Option<String>,
+    pub created_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct ContentReport {
+    pub id: String,
+    pub reporter_id: String,
+    pub target_type: String,
+    pub target_id: String,
+    pub reason: String,
+    pub status: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }

@@ -3,6 +3,7 @@ package com.pawrescue.data.repository
 import com.pawrescue.data.api.ApiService
 import com.pawrescue.data.local.AdDao
 import com.pawrescue.data.local.PetRegistrationDao
+import com.pawrescue.data.local.SocialDao
 import com.pawrescue.data.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -19,7 +20,8 @@ class PetRepository(
     private val themeDao: com.pawrescue.data.local.ThemeDao,
     private val catalogDao: com.pawrescue.data.local.CatalogDao,
     private val apiService: ApiService,
-    private val adDao: AdDao? = null
+    private val adDao: AdDao? = null,
+    private val socialDao: SocialDao? = null
 ) {
 
     val allRegistrations: Flow<List<PetRegistration>> = dao.getAllRegistrationsFlow()
@@ -30,6 +32,14 @@ class PetRepository(
     val statusesCatalog: Flow<List<StatusDto>> = catalogDao.getAllStatusesFlow()
     val allBreedsCatalog: Flow<List<BreedDto>> = catalogDao.getAllBreedsFlow()
     val activeAds: Flow<List<AdFeedItemDto>> = adDao?.getAllAdsFlow() ?: emptyFlow()
+    val conversations: Flow<List<ConversationEntity>> = socialDao?.getAllConversationsFlow() ?: emptyFlow()
+    val adoptionRequests: Flow<List<AdoptionRequestEntity>> = socialDao?.getAllAdoptionRequestsFlow() ?: emptyFlow()
+
+    fun getMessagesFlow(conversationId: String): Flow<List<MessageEntity>> =
+        socialDao?.getMessagesForConversationFlow(conversationId) ?: emptyFlow()
+
+    fun getSightingsFlow(petId: String): Flow<List<PetSightingEntity>> =
+        socialDao?.getSightingsForPetFlow(petId) ?: emptyFlow()
 
     fun getBreedsBySpecies(speciesId: String): Flow<List<BreedDto>> = catalogDao.getBreedsBySpeciesFlow(speciesId)
 
@@ -370,6 +380,182 @@ class PetRepository(
             )
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    // --- SOCIAL INTERACTIONS (Sightings, Chat, Adoptions, Moderation) ---
+
+    suspend fun syncConversations(): List<ConversationEntity> {
+        return try {
+            val response = apiService.listConversations()
+            if (response.isSuccessful) {
+                val list = response.body() ?: emptyList()
+                socialDao?.insertConversations(list)
+                list
+            } else emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun syncMessages(conversationId: String): List<MessageEntity> {
+        return try {
+            val response = apiService.listMessages(conversationId)
+            if (response.isSuccessful) {
+                val list = response.body() ?: emptyList()
+                socialDao?.insertMessages(list)
+                list
+            } else emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun createConversation(
+        type: String,
+        petId: String? = null,
+        shelterId: String? = null,
+        veterinaryId: String? = null,
+        initialMessage: String? = null
+    ): ConversationEntity? {
+        return try {
+            val response = apiService.createConversation(
+                CreateConversationRequest(
+                    type = type,
+                    petId = petId,
+                    shelterId = shelterId,
+                    veterinaryId = veterinaryId,
+                    initialMessage = initialMessage
+                )
+            )
+            if (response.isSuccessful) {
+                val conv = response.body()
+                if (conv != null) {
+                    socialDao?.insertConversation(conv)
+                    syncConversations()
+                }
+                conv
+            } else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun sendMessage(
+        conversationId: String,
+        type: String = "TEXT",
+        content: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        locationLabel: String? = null
+    ): Boolean {
+        return try {
+            val response = apiService.sendMessage(
+                conversationId = conversationId,
+                request = SendMessageRequest(
+                    type = type,
+                    content = content,
+                    latitude = latitude,
+                    longitude = longitude,
+                    locationLabel = locationLabel
+                )
+            )
+            if (response.isSuccessful) {
+                response.body()?.let { socialDao?.insertMessage(it) }
+                syncMessages(conversationId)
+                syncConversations()
+                true
+            } else false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun reportSighting(
+        petId: String,
+        notes: String?,
+        latitude: Double,
+        longitude: Double
+    ): Boolean {
+        return try {
+            val response = apiService.createSighting(
+                CreateSightingRequest(
+                    petId = petId,
+                    notes = notes,
+                    latitude = latitude,
+                    longitude = longitude
+                )
+            )
+            if (response.isSuccessful) {
+                response.body()?.let { socialDao?.insertSighting(it) }
+                true
+            } else false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun syncAdoptions(): List<AdoptionRequestEntity> {
+        return try {
+            val response = apiService.listAdoptions()
+            if (response.isSuccessful) {
+                val list = response.body() ?: emptyList()
+                socialDao?.insertAdoptionRequests(list)
+                list
+            } else emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun requestAdoption(petId: String, notes: String?): AdoptionRequestEntity? {
+        return try {
+            val response = apiService.createAdoption(
+                CreateAdoptionRequestDto(petId = petId, notes = notes)
+            )
+            if (response.isSuccessful) {
+                val req = response.body()
+                syncAdoptions()
+                syncConversations()
+                req
+            } else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun updateAdoptionStatus(adoptionId: String, status: String): Boolean {
+        return try {
+            val response = apiService.updateAdoptionStatus(
+                adoptionId = adoptionId,
+                request = UpdateAdoptionStatusRequest(status = status)
+            )
+            if (response.isSuccessful) {
+                syncAdoptions()
+                true
+            } else false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun reportContent(targetType: String, targetId: String, reason: String): Boolean {
+        return try {
+            val response = apiService.reportContent(
+                ContentReportRequest(targetType = targetType, targetId = targetId, reason = reason)
+            )
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }
